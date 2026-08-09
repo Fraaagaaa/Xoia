@@ -3,10 +3,10 @@
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\_utility;
 
-// El verifier no funciona
+// !times enseña el timepo en el que acabó la ronda, no el tiempo en el que llegaste a ella
 
-#define DEBUG 1
-#define VERSION "1"
+#define DEBUG 0
+#define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
 #define FILE_MONITOR "xoia/monitor.log"
@@ -74,15 +74,6 @@
 #define PANZER_INTERVAL array(4,5,6)
 #define PANZER_START array(8)
 #define PANZER_COND "You must open No Mans Land"
-#define AVOGADRO_INTERVAL array(3,4,5)
-#define AVOGADRO_START undefined
-#define AVOGADRO_COND "You must end a round with lightning above your current zone"
-
-define(x, definition)
-{
-	if(!isdefined(x))
-		x = definition;
-}
 
 istown()
 {
@@ -856,7 +847,6 @@ init_monitor()
 		level thread track_panzers();
 	}
 	if(ismob()) level thread track_brutus();
-	if(istranzit()) level thread track_avogadros();
 }
 
 monitor_log()
@@ -883,7 +873,7 @@ readtwitchchat()
     {
     	level waittill("new_twitch_message", message);
     	msg = strtok(message, "|");
-		command_handler(msg[1], undefined, true);
+		thread commandHandler(msg[1], undefined, true);
     }
 }
 
@@ -913,34 +903,30 @@ readchat()
     addCommands(array("help", "dg", "backspeed", "boxhits"), false);
     addCommands(array("bs", "bh"), true);
 
-    // Cosmetic
-    addCommands(array("character", "papcamo"), false);
-    addCommands(array("c", "pap", "camo"), false);
-
     // Timers
-    addCommands(array("timer", "time", "roundtime", "sph", "traptimer"), false);
+    addCommands(array("timer", "time", "times", "roundtime", "sph", "traptimer"), false);
     addCommands(array("t", "rt", "tt"), true);
 
-    // RNG
-    addCommands(array("firstbox", "box"), false);
-    addCommands(array("fb"), true);
-
     // special rounds
-    addCommands(array("nextavogadro", "avogadros", "nextleapers", "leapers", "brutus", "panzers", "templars", "nextpanzer", "nexttemplars", "rounders", "nextbrutus"), false);
-    addCommands(array("na", "nl", "nextleaper", "nb", "nextbrutus", "np", "nt", "nexttemplar"), true);
+    addCommands(array("nextleapers", "leapers", "brutus", "panzers", "templars", "nextpanzer", "nexttemplars", "rounders", "nextbrutus"), false);
+    addCommands(array("nl", "nextleaper", "nb", "nextbrutus", "np", "nt", "nexttemplar"), true);
 
     // Zombies
     addCommands(array("zc", "tzc"), false);
     addCommands(array("zombiecount", "totalzombiecount"), true);
 
     // Set-up
-    addCommands(array("fridge", "key", "forcepap"), false);
-    addCommands(array("f"), true);
+    addCommands(array("fridge", "key", "forcepap", "firstbox", "box"), false);
+    addCommands(array("f", "fb"), true);
+
+    // Cosmetic
+    addCommands(array("character", "papcamo"), false);
+    addCommands(array("c", "pap", "camo"), false);
 
     while (true) 
     {
         level waittill("say", message, player);
-		command_handler(message, player, false);
+		thread commandHandler(message, player, false);
     }
 }
 
@@ -954,11 +940,11 @@ readconsole()
         if(dvar != "chat")
             continue;
 
-		command_handler(new, undefined, false);
+		thread commandHandler(new, undefined, false);
     }
 }
 
-command_handler(org_message, player, twitch)
+commandHandler(org_message, player, twitch)
 {
 	setDvar("chat", "xxxxxxxxxxxx");
 	if(!isdefined(player)) player = gethostplayer();
@@ -976,61 +962,58 @@ command_handler(org_message, player, twitch)
 		globalprint("Unknown command ^1" + org_message + "^7. Try !help");
 		return;
 	}
-    level thread commands(msg, player, twitch);
+
     level notify("monitor_log", message);
+    processCommand(msg, player, twitch);
 }
 
-commands(msg, player, twitch)
+processCommand(command, player, twitch)
 {
-	setDvar("chat", "xxxxxxxxxxxx");
-
     if(!twitch)
     {
         // This can not be used by twitch chat
-        switch(msg[0])
+        switch(command[0])
         {
             case "!help": helpcase(); break;
 
-            case "!firstbox": case "!fb": fbcase(msg); break;
-            case "!box": boxcase(msg[1]); break;
-            case "!character": case "!c": charactercase(player, msg[1]); break;
+            case "!firstbox": case "!fb": fbcase(command); break;
+            case "!box": boxcase(command[1]); break;
+            case "!character": case "!c": charactercase(player, command[1]); break;
             case "!forcepap": forcepapcase(); break;
 
-		    case "!timer": timercase(msg[1]); break;
+		    case "!timer": timercase(command[1]); break;
 		    case "!traptimer": case "!tt": traptimercase(); break;
 
-		    case "!papcamo": case "!pap": case "!camo": camo(msg[1]); break;
+		    case "!papcamo": case "!pap": case "!camo": camo(command[1]); break;
 
-		    case "!fridge": case "!f": player fridgecase(msg[1]); break;
+		    case "!fridge": case "!f": player fridgecase(command[1]); break;
 
-            case "!key": keycase(msg[1]); break;
+            case "!key": keycase(command[1]); break;
 
 		    case "!bs": case "!backspeed": bscase(); break;
 
 		    default: break;
         }
     }
-	switch(msg[0])
+	switch(command[0])
 	{
-		case "!zc": case "zombiecount": print_zombies_at_round(msg[1], twitch); break;
-		case "!tzc": case "totalzombiecount": total_zombie_count(msg[1], msg[2], twitch); break;
-		case "!dg": print_drops_grabbed(msg[1], twitch); break;
+		case "!zc": case "zombiecount": print_zombies_at_round(command[1], twitch); break;
+		case "!tzc": case "totalzombiecount": total_zombie_count(command[1], command[2], twitch); break;
+		case "!dg": print_drops_grabbed(command[1], twitch); break;
 		case "!bh": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
 
 
 		case "!times": print_times(twitch); break;
-		case "!rt": case "!roundtime": print_round_times(msg[1], twitch); break;
+		case "!rt": case "!roundtime": print_round_times(command[1], twitch); break;
 		case "!t": case "!time": print_game_time(twitch); break;
-		case "!sph": print_sph(msg[1], twitch); break;
+		case "!sph": print_sph(command[1], twitch); break;
 
-		case "!na": case "!nextavogadro": next_special_round("Avogadro", twitch); break;
 		case "!nb": case "!nextbrutus": next_special_round("Brutus", twitch); break;
 		case "!nt": case "!nexttemplars": case "!nexttemplar": next_special_round("Templar", twitch); break;
 		case "!np": case "!nextpanzer": next_special_round("Panzer", twitch); break;
 		case "!nl": case "!nextleapers": case "!nextleaper": next_special_round("Leaper", twitch); break;
 
 		case "!rounders": rounderscase(twitch); break;
-		case "!avogadros": special_rounds("Avogadro", twitch); break;
 		case "!brutus": special_rounds("Brutus", twitch); break;
 		case "!templars": special_rounds("Templar", twitch); break;
 		case "!panzers": special_rounds("Panzer", twitch); break;
@@ -1337,37 +1320,42 @@ print_round_times(round, twitch)
 
 monitor_round_loop()
 {
-	level endon("end_game");
+    level endon("end_game");
     level.round_times = array();
     level.round_total_time = array();
 
-	if(isdierise())
+    if(isdierise())
     {
-		level.special_rounds["Leaper"] = array();
-		SROUND_ARRAY("Leaper") = array();
-		SROUND_ARRAY_COND("Leaper") = LEAPERS_COND;
-		SROUND_ARRAY_INTERVAL("Leaper") = LEAPERS_INTERVAL;
+        level.special_rounds["Leaper"] = array();
+        SROUND_ARRAY("Leaper") = array();
+        SROUND_ARRAY_COND("Leaper") = LEAPERS_COND;
+        SROUND_ARRAY_INTERVAL("Leaper") = LEAPERS_INTERVAL;
         SROUND_ARRAY_START("Leaper") = LEAPERS_START;
 
         while(true)
         {
             level waittill("start_of_round");
             level.round_start_time = gettime();
+            level.round_total_time[level.round_total_time.size] = (level.round_start_time / 1000 - level.game_start_time);
+
             if(flag("leaper_round")) SROUND_ARRAY_NEW("Leaper") = level.round_number;
             level waittill("end_of_round");
+
             level.round_end_time = gettime();
             level.round_times[level.round_times.size] = (level.round_end_time - level.round_start_time) / 1000;
-            level.round_total_time[level.round_total_time.size] = (level.round_end_time / 1000 - level.game_start_time);
         }
     }
+
     while(true)
     {
         level waittill("start_of_round");
         level.round_start_time = gettime();
+        level.round_total_time[level.round_total_time.size] = (level.round_start_time / 1000 - level.game_start_time);
+
         level waittill("end_of_round");
+
         level.round_end_time = gettime();
         level.round_times[level.round_times.size] = (level.round_end_time - level.round_start_time) / 1000;
-        level.round_total_time[level.round_total_time.size] = (level.round_end_time / 1000 - level.game_start_time);
     }
 }
 
@@ -1410,22 +1398,6 @@ track_templars()
         flag_wait("recapture_event_in_progress");
         SROUND_ARRAY_NEW("Templar") = level.round_number;
         flag_waitopen("recapture_event_in_progress"); 
-    }
-}
-
-track_avogadros()
-{
-    level endon("end_game");
-    level.special_rounds["Avogadro"] = array();
-    SROUND_ARRAY("Avogadro") = array();
-    SROUND_ARRAY_COND("Avogadro") = AVOGADRO_COND;
-    SROUND_ARRAY_INTERVAL("Avogadro") = AVOGADRO_INTERVAL;
-    SROUND_ARRAY_START("Avogadro") = AVOGADRO_START;
-    while(true)
-    {
-        level waittill( "avogadro_defeated" );
-        SROUND_ARRAY_NEW("Avogadro") = level.round_number;
-        level waittill("end_of_round");
     }
 }
 
@@ -1489,31 +1461,33 @@ print_times(twitch)
         return;
 
     msg = "Times: ";
+    count = 0;
 
     step = 5;
-    if(rnd > 70)
-    {
+
+    if(rnd >= 70)
         step = 10;
-    }
 
-    for(i = step; i <= rnd; i += (step * 2))
+    for(i = step; i <= rnd; i += step)
     {
-        r1 = i;
-        r2 = i + step;
+        if(isdefined(level.round_total_time[i - 2]))
+        {
+            msg += "[" + i + "]: " + int_to_time(level.round_total_time[i - 2]);
+            count++;
 
-        linea = "";
-
-        if(isdefined(level.round_total_time[r1 - 1]))
-            linea += "[" + r1 + "]: " + int_to_time(level.round_total_time[r1 - 1]);
-
-        if(r2 <= rnd && isdefined(level.round_total_time[r2 - 1]))
-            linea += "   [" + r2 + "]: " + int_to_time(level.round_total_time[r2 - 1]);
-
-        if(linea != "")
-            msg += linea + "\n";
+            if(count == 4)
+            {
+                globalprint(msg, twitch);
+                msg = "Times: ";
+                count = 0;
+            }
+            else
+                msg += "\t";
+        }
     }
 
-    globalprint(msg, twitch);
+    if(count > 0)
+        globalprint(msg, twitch);
 }
 
 total_zombie_count(iz, dr, twitch)
@@ -1655,22 +1629,19 @@ helpcase()
     while (i < level.commands.size)
     {
         text = "";
-
-        for (j = 0; j < 10; j++)
+        for (j = 0; j < 12; j++)
         {
             if (!isdefined(level.commands[i + j]))
                 break;
 
             if (j > 0)
-                text += "  ";
+                text += " ";
 
             text += level.commands[i + j];
         }
 
-        if (text != "")
-            globalprint(text);
-
-        i += 10;
+        globalprint(text);
+        i += 12;
         wait 0.1;
     }
 }
@@ -2777,7 +2748,9 @@ init_anticheat()
     if(isdefined(level.anticheat_module) && level.anticheat_module)
         return;
 
-    define(level.anticheat_module, true);
+    if(isdefined(level.anticheat_module))
+        level.anticheat_module = true;
+
     level thread modding_warnings();
     level thread alwaysDrawIdentifier();
     level thread endgameHashFlash();
