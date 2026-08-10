@@ -3,8 +3,6 @@
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\_utility;
 
-// !times enseña el timepo en el que acabó la ronda, no el tiempo en el que llegaste a ella
-
 #define DEBUG 0
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
@@ -1184,7 +1182,7 @@ next_special_round(type, twitch)
                     msg += SROUND_ARRAY_START(type)[i] + ", ";
             }
             msg += SROUND_ARRAY_START_LAST(type);
-            globalprint(msg);
+            globalprint(msg, twitch);
         }
 		return;
 	}
@@ -1203,7 +1201,7 @@ next_special_round(type, twitch)
             msg += SROUND_ARRAY_INTERVAL(type)[j] + SROUND_ARRAY_LAST(type) + ", ";
     }
     msg += SROUND_ARRAY_INTERVAL(type)[j] + SROUND_ARRAY_LAST(type);
-    globalprint(msg);
+    globalprint(msg, twitch);
 }
 
 print_drops_grabbed(round, twitch)
@@ -1470,9 +1468,9 @@ print_times(twitch)
 
     for(i = step; i <= rnd; i += step)
     {
-        if(isdefined(level.round_total_time[i - 2]))
+        if(isdefined(level.round_total_time[i - 1]))
         {
-            msg += "[" + i + "]: " + int_to_time(level.round_total_time[i - 2]);
+            msg += "[" + i + "]: " + int_to_time(level.round_total_time[i - 1]);
             count++;
 
             if(count == 4)
