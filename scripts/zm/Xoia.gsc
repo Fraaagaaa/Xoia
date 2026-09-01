@@ -11,7 +11,7 @@
 #define FILE_TWITCH_SEND "twitch/send_to_twitch.txt"
 
 #define CLEAR_WATERMARK_ROUND 10
-#define MAX_FB_ROUND 10
+#define MAX_FB_ROUND 7
 
 #define FRIDGE_AND_BANK_ROUND 15
 
@@ -29,21 +29,21 @@
 #define CAMO_GLAM 44
 #define CAMO_ORIGINS 45
 
-#define CDC 1
-#define CIA 2
 #define MISTY 1
 #define RUSSMAN 2
 #define MARLTON 3
 #define STUHLINGER 4
-#define ARLINGTON 1
-#define OLEARY 2
-#define DELUCA 3
-#define HANDSOME 4
-#define AFTERLIFE 5
-#define DEMPSEY 1
-#define NIKOLAI 2
-#define TAKEO 3
-#define RICHTOFEN 4
+#define CDC 5
+#define CIA 6
+#define ARLINGTON 7
+#define OLEARY 8
+#define DELUCA 9
+#define HANDSOME 10
+#define AFTERLIFE 11
+#define DEMPSEY 12
+#define NIKOLAI 13
+#define TAKEO 14
+#define RICHTOFEN 15
 
 #define STAT_KEY_MAP "zm_prison"
 #define STAT_KEY "clip"
@@ -130,7 +130,7 @@ isvictismap()
 
 isstgame()
 {
-	return ((isdefined(level.strat_tester) && level.strat_tester) || (isdefined(level.b2_strat_tester) && level.b2_strat_tester));
+    return getDvar("fs_game") == "mods/zm_strattester";
 }
 
 isround(round)
@@ -188,6 +188,8 @@ connected()
 
         player thread disconnect();
 		player thread spawned();
+		player thread reapply_character_on_spawn();
+		player thread xoia_sync_start();
 		if(isvictismap())
 		{
 			player thread bank();
@@ -280,108 +282,153 @@ change_player_model(desired_character)
     level endon("end_game");
     self endon("disconnect");
 
-    if(isvictismap())
+    // FIX (punto 5 del encargo): antes esta funcion cambiaba el modelo pero
+    // no guardaba en ningun sitio que personaje habia elegido el jugador.
+    // Al reaparecer (revive / nueva ronda) el juego resetea el modelo del
+    // jugador al de por defecto y la seleccion se perdia. Guardamos el
+    // valor en el propio jugador para poder reaplicarlo en cada respawn
+    // (ver reapply_character_on_spawn() mas abajo).
+    self.xoia_character = desired_character;
+
+    switch(desired_character)
     {
-        switch(desired_character)
-        {
-            case MISTY:
-                self setmodel( "c_zom_player_farmgirl_dlc1_fb" );
-                self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
-                self setviewmodel( "c_zom_farmgirl_viewhands" );
-                break;
-            case RUSSMAN:
-                self setmodel( "c_zom_player_oldman_dlc1_fb" );
-                self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
-                self setviewmodel( "c_zom_oldman_viewhands" );
-                break;
-            case MARLTON:
-                self setmodel( "c_zom_player_reporter_dlc1_fb" );
-                self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
-                self setviewmodel( "c_zom_reporter_viewhands" );
-                break;
-            case STUHLINGER:
-                self setmodel( "c_zom_player_engineer_dlc1_fb" );
-                self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
-                self setviewmodel( "c_zom_engineer_viewhands" );
-                break;
-        }
+        case MISTY:
+            self setmodel( "c_zom_player_farmgirl_dlc1_fb" );
+            self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
+            self setviewmodel( "c_zom_farmgirl_viewhands" );
+            break;
+        case RUSSMAN:
+            self setmodel( "c_zom_player_oldman_dlc1_fb" );
+            self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
+            self setviewmodel( "c_zom_oldman_viewhands" );
+            break;
+        case MARLTON:
+            self setmodel( "c_zom_player_reporter_dlc1_fb" );
+            self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
+            self setviewmodel( "c_zom_reporter_viewhands" );
+            break;
+        case STUHLINGER:
+            self setmodel( "c_zom_player_engineer_dlc1_fb" );
+            self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
+            self setviewmodel( "c_zom_engineer_viewhands" );
+            break;
+        case CDC:
+            self setmodel("c_zom_player_cdc_fb");
+            self setviewmodel("c_zom_suit_viewhands");
+            break;
+        case CIA:
+            self setmodel("c_zom_player_cdc_fb");
+            self setviewmodel("c_zom_suit_viewhands");
+            break;
+        case OLEARY:
+            self setmodel( "c_zom_player_oleary_fb" );
+            self setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
+            break;
+        case DELUCA:
+            self setmodel( "c_zom_player_deluca_fb" );
+            self setviewmodel( "c_zom_deluca_longsleeve_viewhands" );
+            break;
+        case HANDSOME:
+            self setmodel( "c_zom_player_handsome_fb" );
+            self setviewmodel( "c_zom_handsome_sleeveless_viewhands" );
+            break;
+        case ARLINGTON:
+            self setmodel( "c_zom_player_arlington_fb" );
+            self setviewmodel( "c_zom_arlington_coat_viewhands" );
+            break;
+        case AFTERLIFE:
+            self setmodel( "c_zom_player_handsome_fb" );
+            self setviewmodel( "c_zom_ghost_viewhands" );
+            break;
+        case DEMPSEY:
+            self setmodel( "c_zom_tomb_dempsey_fb" );
+            self setviewmodel( "c_zom_dempsey_viewhands" );
+            break;
+        case NIKOLAI:
+            self setmodel( "c_zom_tomb_nikolai_fb" );
+            self setviewmodel( "c_zom_nikolai_viewhands" );
+            break;
+        case TAKEO:
+            self setmodel( "c_zom_tomb_takeo_fb" );
+            self setviewmodel( "c_zom_takeo_viewhands" );
+            break;
+        case RICHTOFEN:
+            self setmodel( "c_zom_tomb_richtofen_fb" );
+            self setviewmodel( "c_zom_richtofen_viewhands" );
+            break;
     }
-    else if(issurvivalmap())
+}
+
+// FIX v2 (el jugador reporta que "al reaparecer nunca se devuelve el
+// personaje"): la version anterior solo escuchaba "spawned_player" en
+// bucle. Pero en el resto de Xoia.gsc, "spawned_player" SIEMPRE se usa con
+// un unico waittill (linea 197 en connected(), y en spawned() mas abajo),
+// nunca en bucle -> todo indica que en este mod solo se notifica UNA VEZ
+// por jugador (el primer spawn de la partida), no en cada revive/ronda.
+// Un jugador que muere del todo (se desangra sin que lo revivan) no
+// "respawnea" hasta EMPEZAR LA SIGUIENTE RONDA -> ese es el punto real de
+// reaparicion. Xoia.gsc ya usa "start_of_round" de forma fiable en varios
+// sitios (busca "level waittill(\"start_of_round\")"), asi que lo usamos
+// como segunda via, ademas de mantener el primer spawn por si acaso.
+reapply_character_on_spawn()
+{
+    level endon("end_game");
+    self endon("disconnect");
+
+    // Primer spawn de la partida.
+    self waittill("spawned_player");
+    if(isdefined(self.xoia_character))
     {
-        if(desired_character > 2)
-            desired_character = randomIntRange(1, 2);
-        self detachall();
-        switch(desired_character)
-        {
-            case CDC:
-                self setmodel("c_zom_player_cdc_fb");
-                self setviewmodel("c_zom_suit_viewhands");
-                break;
-            case CIA:
-                self setmodel("c_zom_player_cdc_fb");
-                self setviewmodel("c_zom_suit_viewhands");
-                break;
-        }
+        wait 0.05;
+        self change_player_model(self.xoia_character);
     }
-    else if(ismob())
+
+    // Cualquier respawn real (tras desangrarse sin revivir) ocurre al
+    // empezar la ronda siguiente. Una revivida a mitad de ronda NO crea
+    // una entidad nueva ni resetea el modelo, asi que no hace falta
+    // escuchar nada para ese caso.
+    for(;;)
     {
-        switch(desired_character)
+        level waittill("start_of_round");
+
+        if(isdefined(self.xoia_character) && isalive(self))
         {
-            case OLEARY:
-                self setmodel( "c_zom_player_oleary_fb" );
-                self setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
-                break;
-
-            case DELUCA:
-                self setmodel( "c_zom_player_deluca_fb" );
-                self setviewmodel( "c_zom_deluca_longsleeve_viewhands" );
-                break;
-
-            case HANDSOME:
-                self setmodel( "c_zom_player_handsome_fb" );
-                self setviewmodel( "c_zom_handsome_sleeveless_viewhands" );
-                break;
-
-            case ARLINGTON:
-                self setmodel( "c_zom_player_arlington_fb" );
-                self setviewmodel( "c_zom_arlington_coat_viewhands" );
-                break;
-
-            case AFTERLIFE:
-                self setmodel( "c_zom_player_handsome_fb" );
-                self setviewmodel( "c_zom_ghost_viewhands" );
-                break;
-        }
-    }
-    else if(isorigins())
-    {
-        switch(desired_character)
-        {
-            case DEMPSEY:
-                self setmodel( "c_zom_tomb_dempsey_fb" );
-                self setviewmodel( "c_zom_dempsey_viewhands" );
-                break;
-            case NIKOLAI:
-                self setmodel( "c_zom_tomb_nikolai_fb" );
-                self setviewmodel( "c_zom_nikolai_viewhands" );
-                break;
-            case TAKEO:
-                self setmodel( "c_zom_tomb_takeo_fb" );
-                self setviewmodel( "c_zom_takeo_viewhands" );
-                break;
-            case RICHTOFEN:
-                self setmodel( "c_zom_tomb_richtofen_fb" );
-                self setviewmodel( "c_zom_richtofen_viewhands" );
-                break;
+            wait 0.05;
+            self change_player_model(self.xoia_character);
         }
     }
 }
 
+// FIX (no recuerda el personaje al empezar la partida): abre el menu
+// invisible "XoiaSync" (ver optionsxoia.lua) nada mas terminar de cargar
+// el jugador, replicando exactamente lo que hace el mod de referencia con
+// "StratTesterPerkSync". Ese menu lee el dvar de perfil PERSISTIDO
+// ("seta") del cliente y lo reenvia por SendMenuResponse, lo que hace que
+// change_player_model() se ejecute automaticamente con el ultimo personaje
+// que el jugador eligio, sin que tenga que abrir el menu a mano.
+//
+// AVISO SIN VERIFICAR: "self openmenu(...)" para forzar la apertura de un
+// menu Lua desde GSC es una tecnica estandar en mods de zombies de T6,
+// pero no he podido compilar/probar esto en tu entorno de Plutonium. Si al
+// probarlo el menu invisible no llega a abrirse, dimelo: en optionsstrattester.lua
+// no encontre el punto exacto donde se abre "StratTesterPerkSync" (no esta
+// en los 3 archivos que me pasaste), asi que puede que tu base use un gancho
+// distinto (por ejemplo, algo en un options.lua propio de Strat Tester) que
+// tendria que revisar para replicarlo con precision.
+xoia_sync_start()
+{
+    level endon("end_game");
+    self endon("disconnect");
+
+    flag_wait("initial_blackscreen_passed");
+    self openmenu("XoiaSync");
+}
+
 set_exert_id()
 {
-	self endon("disconnect");
-	wait_network_frame();
-	self maps\mp\zombies\_zm_audio::setexertvoice(self.characterindex);
+    self endon("disconnect");
+    wait_network_frame();
+    self maps\mp\zombies\_zm_audio::setexertvoice(self.characterindex);
 }
 
 createdvars()
@@ -399,6 +446,9 @@ createdvars()
         createDvar("avg", 1);
         enabledvarchangednotify("avg");
         createDvar("papcamo", CAMO_GREEN_RUN);
+
+        createDvar("boxhits", 1);
+        enabledvarchangednotify("boxhits");
     }
     if (isvictismap())
     {
@@ -428,102 +478,102 @@ createDvar(dvar, set)
 
 custom_pap_camo(weapon)
 {
-	if(!isdefined(self.pack_a_punch_weapon_options))
-		self.pack_a_punch_weapon_options = [];
+    if(!isdefined(self.pack_a_punch_weapon_options))
+        self.pack_a_punch_weapon_options = [];
 
-	smiley_face_reticle_index = 1;
-	base = maps\mp\zombies\_zm_weapons::get_base_name(weapon);
-	camo_index = 39;
+    smiley_face_reticle_index = 1;
+    base = maps\mp\zombies\_zm_weapons::get_base_name(weapon);
+    camo_index = 39;
 
-	if(base == "rnma_upgraded_zm" || base == "rnma_zm" || base == "slowgun_upgraded_zm") camo_index = 39;
-	else if(base == "mg08_upgraded_zm" || base == "mg08_zm" || base == "c96_upgraded_zm" || base == "c96_zm") camo_index = 40;
-	else if (getDvar("papcamo") != "") camo_index = getDvarInt("papcamo");
-	else if (level.script == "zm_prison") camo_index = 40;
-	else if (level.script == "zm_tomb") camo_index = 45;
+    if(base == "rnma_upgraded_zm" || base == "rnma_zm" || base == "slowgun_upgraded_zm") camo_index = 39;
+    else if(base == "mg08_upgraded_zm" || base == "mg08_zm" || base == "c96_upgraded_zm" || base == "c96_zm") camo_index = 40;
+    else if (getDvar("papcamo") != "") camo_index = getDvarInt("papcamo");
+    else if (level.script == "zm_prison") camo_index = 40;
+    else if (level.script == "zm_tomb") camo_index = 45;
 
-	lens_index = randomintrange(0, 6);
-	reticle_index = randomintrange(0, 16);
-	reticle_color_index = randomintrange(0, 6);
-	plain_reticle_index = 16;
-	r = randomint(10);
-	use_plain = r < 3;
+    lens_index = randomintrange(0, 6);
+    reticle_index = randomintrange(0, 16);
+    reticle_color_index = randomintrange(0, 6);
+    plain_reticle_index = 16;
+    r = randomint(10);
+    use_plain = r < 3;
 
-	if(base == "saritch_upgraded_zm")
-		reticle_index = smiley_face_reticle_index;
+    if(base == "saritch_upgraded_zm")
+        reticle_index = smiley_face_reticle_index;
 
-	else if(use_plain)
-		reticle_index = plain_reticle_index;
+    else if(use_plain)
+        reticle_index = plain_reticle_index;
 
-	scary_eyes_reticle_index = 8;
-	purple_reticle_color_index = 3;
-	if(reticle_index == scary_eyes_reticle_index)
-		reticle_color_index = purple_reticle_color_index;
+    scary_eyes_reticle_index = 8;
+    purple_reticle_color_index = 3;
+    if(reticle_index == scary_eyes_reticle_index)
+        reticle_color_index = purple_reticle_color_index;
 
-	letter_a_reticle_index = 2;
-	pink_reticle_color_index = 6;
-	if(reticle_index == letter_a_reticle_index)
-		reticle_color_index = pink_reticle_color_index;
+    letter_a_reticle_index = 2;
+    pink_reticle_color_index = 6;
+    if(reticle_index == letter_a_reticle_index)
+        reticle_color_index = pink_reticle_color_index;
 
-	letter_e_reticle_index = 7;
-	green_reticle_color_index = 1;
+    letter_e_reticle_index = 7;
+    green_reticle_color_index = 1;
 
-	if(reticle_index == letter_e_reticle_index)
-		reticle_color_index = green_reticle_color_index;
+    if(reticle_index == letter_e_reticle_index)
+        reticle_color_index = green_reticle_color_index;
 
 
-	if(!maps\mp\zombies\_zm_weapons::is_weapon_upgraded(weapon))
-		return self calcweaponoptions(0, 0, 0, 0, 0);
+    if(!maps\mp\zombies\_zm_weapons::is_weapon_upgraded(weapon))
+        return self calcweaponoptions(0, 0, 0, 0, 0);
 
-	self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions(camo_index, lens_index, reticle_index, reticle_color_index);
-	return self.pack_a_punch_weapon_options[weapon];
+    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions(camo_index, lens_index, reticle_index, reticle_color_index);
+    return self.pack_a_punch_weapon_options[weapon];
 }
 
 timer()
 {
-	level endon("end_game");
-	self endon("disconnect");
+    level endon("end_game");
+    self endon("disconnect");
 
-	self.timer = newclienthudelem(self);
-	self.timer.alpha = 1;
-	self.timer.color = (1, 1, 1);
-	self.timer.hidewheninmenu = true;
-	self.timer.fontscale = 1.7;
+    self.timer = newclienthudelem(self);
+    self.timer.alpha = 1;
+    self.timer.color = (1, 1, 1);
+    self.timer.hidewheninmenu = true;
+    self.timer.fontscale = 1.7;
 
-	self thread round_timer();
-	flag_wait("initial_blackscreen_passed");
+    self thread round_timer();
+    flag_wait("initial_blackscreen_passed");
 
-	if(!isdefined(level.start_time))
-	{
-		self.timer settimerup(0);
-   		level.start_time = int(gettime() / 1000);
-	}
-	else
-	{
-		actual_time = int(gettime() / 1000);
-		time_past = actual_time - level.start_time;
-		self.timer settimerup(-time_past);
-	}
+    if(!isdefined(level.start_time))
+    {
+        self.timer settimerup(0);
+        level.start_time = int(gettime() / 1000);
+    }
+    else
+    {
+        actual_time = int(gettime() / 1000);
+        time_past = actual_time - level.start_time;
+        self.timer settimerup(-time_past);
+    }
 }
 
 round_timer()
 {
-	level endon("end_game");
+    level endon("end_game");
 
-	self.round_timer = newclienthudelem(self);
-	self.round_timer.alpha = 1;
-	self.round_timer.fontscale = 1.7;
-	self.round_timer.color = (0.8, 0.8, 0.8);
-	self.round_timer.hidewheninmenu = true;
-	self.round_timer.x = self.timer.x;
-	self.round_timer.y = self.timer.y + 15;
-	flag_wait("initial_blackscreen_passed");
-	while(true)
-	{
-		self.round_timer settimerup(0);
-		level waittill("end_of_round");
+    self.round_timer = newclienthudelem(self);
+    self.round_timer.alpha = 1;
+    self.round_timer.fontscale = 1.7;
+    self.round_timer.color = (0.8, 0.8, 0.8);
+    self.round_timer.hidewheninmenu = true;
+    self.round_timer.x = self.timer.x;
+    self.round_timer.y = self.timer.y + 15;
+    flag_wait("initial_blackscreen_passed");
+    while(true)
+    {
+        self.round_timer settimerup(0);
+        level waittill("end_of_round");
         self.round_timer thread display_round_time((level.round_end_time - level.round_start_time) / 1000);
-		level waittill("start_of_round");
-	}
+        level waittill("start_of_round");
+    }
 }
 
 display_round_time(time)
@@ -541,114 +591,114 @@ display_round_time(time)
 
 traptimer()
 {
-	level endon("end_game");
+    level endon("end_game");
 
-	level.traptimer = createserverfontstring( "objective", 1.4 );
+    level.traptimer = createserverfontstring( "objective", 1.4 );
     level.traptimer.alignx = "left";
-	level.traptimer.aligny = "top";
-	level.traptimer.horzalign = "user_left";
-	level.traptimer.vertalign = "user_top";
-	level.traptimer.x = -2;
-	level.traptimer.y = 14;
-	level.traptimer.fontscale = 1.4;
-	level.traptimer.hidewheninmenu = true;
-	level.traptimer.hidden = 0;
-	level.traptimer.label = &"";
+    level.traptimer.aligny = "top";
+    level.traptimer.horzalign = "user_left";
+    level.traptimer.vertalign = "user_top";
+    level.traptimer.x = -2;
+    level.traptimer.y = 14;
+    level.traptimer.fontscale = 1.4;
+    level.traptimer.hidewheninmenu = true;
+    level.traptimer.hidden = 0;
+    level.traptimer.label = &"";
 
-	while(true)
-	{
-		if(getDvarInt("traptimer"))
-		{
-			level waittill( "trap_activated" );
-			if( level.trap_activated )
-			{
-				wait 0.1;
-				level.traptimer.color = ( 0, 1, 0 );
-				level.traptimer.alpha = 1;
-				level.traptimer settimer( 25 );
-				wait 25;
-				level.traptimer settimer( 25 );
-				level.traptimer.color = ( 1, 0, 0 );
-				wait 25;
-				level.traptimer.alpha = 0;
-			}
-		}
+    while(true)
+    {
+        if(getDvarInt("traptimer"))
+        {
+            level waittill( "trap_activated" );
+            if( level.trap_activated )
+            {
+                wait 0.1;
+                level.traptimer.color = ( 0, 1, 0 );
+                level.traptimer.alpha = 1;
+                level.traptimer settimer( 25 );
+                wait 25;
+                level.traptimer settimer( 25 );
+                level.traptimer.color = ( 1, 0, 0 );
+                wait 25;
+                level.traptimer.alpha = 0;
+            }
+        }
         level waittill("dvar_changed");
-	}
+    }
 }
 
 timerlocation()
 {
-	level endon("end_game");
-	self endon("disconnect");
+    level endon("end_game");
+    self endon("disconnect");
 
-	while(true)
-	{
-		switch(getDvarInt("timer"))
-		{
-			case TIMER_HIDE:
-				self.timer.alpha = 0;
-				self.round_timer.alpha = 0;
-				break;
-			case TIMER_TOP_RIGHT:
-				self.timer.alignx = "right";
-				self.timer.aligny = "top";
-				self.timer.horzalign = "user_right";
-				self.timer.vertalign = "user_top";
-				self.timer.x = -1;
-				self.timer.y = 13;
-				self.timer.alpha = 1;
-				self.round_timer.alpha = 1;
-				if(getDvar("cg_drawFPS") != "Off")
-					self.timer.y += 6;
-				if(getDvar("cg_drawFPS") != "Off" && GetDvar("language") == "japanese")
-					self.timer.y += 10;
-				if(isdierise())
-					self.timer.y = 30;
-				break;
-			case TIMER_TOP_LEFT:
-				self.timer.alignx = "left";
-				self.timer.aligny = "top";
-				self.timer.horzalign = "user_left";
-				self.timer.vertalign = "user_top";
-				self.timer.x = 1;
-				self.timer.y = 0;
-				self.timer.alpha = 1;
-				self.round_timer.alpha = 1;
-				if(isorigins()) self.timer.y = 45;
-				if(issurvivalmap()) self.timer.y = 40;
-				if(isdierise() && level.springpad_hud.alpha != 0) self.timer.y = 10;
-				if(isburied() && level.springpad_hud.alpha != 0) self.timer.y = 35;
-				break;
-			case TIMER_MID_LEFT:
-				self.timer.alignx = "left";
-				self.timer.aligny = "top";
-				self.timer.horzalign = "user_left";
-				self.timer.vertalign = "user_top";
-				self.timer.x = 1;
-				self.timer.y = 250;
-				self.timer.alpha = 1;
-				self.round_timer.alpha = 1;
-				break;
-			case TIMER_AMMO:
-				self.timer.alignx = "right";
-				self.timer.aligny = "top";
-				self.timer.horzalign = "user_right";
-				self.timer.vertalign = "user_top";
-				self.timer.x = -170;
-				self.timer.y = 415;
-				self.timer.alpha = 1;
-				self.round_timer.alpha = 1;
-				break;
+    while(true)
+    {
+        switch(getDvarInt("timer"))
+        {
+            case TIMER_HIDE:
+                self.timer.alpha = 0;
+                self.round_timer.alpha = 0;
+                break;
+            case TIMER_TOP_RIGHT:
+                self.timer.alignx = "right";
+                self.timer.aligny = "top";
+                self.timer.horzalign = "user_right";
+                self.timer.vertalign = "user_top";
+                self.timer.x = -1;
+                self.timer.y = 13;
+                self.timer.alpha = 1;
+                self.round_timer.alpha = 1;
+                if(getDvar("cg_drawFPS") != "Off")
+                    self.timer.y += 6;
+                if(getDvar("cg_drawFPS") != "Off" && GetDvar("language") == "japanese")
+                    self.timer.y += 10;
+                if(isdierise())
+                    self.timer.y = 30;
+                break;
+            case TIMER_TOP_LEFT:
+                self.timer.alignx = "left";
+                self.timer.aligny = "top";
+                self.timer.horzalign = "user_left";
+                self.timer.vertalign = "user_top";
+                self.timer.x = 1;
+                self.timer.y = 0;
+                self.timer.alpha = 1;
+                self.round_timer.alpha = 1;
+                if(isorigins()) self.timer.y = 45;
+                if(issurvivalmap()) self.timer.y = 40;
+                if(isdierise() && level.springpad_hud.alpha != 0) self.timer.y = 10;
+                if(isburied() && level.springpad_hud.alpha != 0) self.timer.y = 35;
+                break;
+            case TIMER_MID_LEFT:
+                self.timer.alignx = "left";
+                self.timer.aligny = "top";
+                self.timer.horzalign = "user_left";
+                self.timer.vertalign = "user_top";
+                self.timer.x = 1;
+                self.timer.y = 250;
+                self.timer.alpha = 1;
+                self.round_timer.alpha = 1;
+                break;
+            case TIMER_AMMO:
+                self.timer.alignx = "right";
+                self.timer.aligny = "top";
+                self.timer.horzalign = "user_right";
+                self.timer.vertalign = "user_top";
+                self.timer.x = -170;
+                self.timer.y = 415;
+                self.timer.alpha = 1;
+                self.round_timer.alpha = 1;
+                break;
 
-			default: break;
-		}
-		self.round_timer.alignx = self.timer.alignx;
-		self.round_timer.aligny = self.timer.aligny;
-		self.round_timer.horzalign = self.timer.horzalign;
-		self.round_timer.vertalign = self.timer.vertalign;
-		self.round_timer.x = self.timer.x;
-		self.round_timer.y = self.timer.y + 15;
+            default: break;
+        }
+        self.round_timer.alignx = self.timer.alignx;
+        self.round_timer.aligny = self.timer.aligny;
+        self.round_timer.horzalign = self.timer.horzalign;
+        self.round_timer.vertalign = self.timer.vertalign;
+        self.round_timer.x = self.timer.x;
+        self.round_timer.y = self.timer.y + 15;
         if(isdefined(level.traptimer))
         {
             level.traptimer.alignx = self.timer.alignx;
@@ -658,25 +708,25 @@ timerlocation()
             level.traptimer.x = self.timer.x;
             level.traptimer.y = self.timer.y + 30;
         }
-		
-		wait 0.1;
-		if(GetDvar("language") == "japanese")
-		{
-			self.timer.fontscale = 1.5;
-			self.round_timer.fontscale = self.timer.fontscale;
-		}
+
+        wait 0.1;
+        if(GetDvar("language") == "japanese")
+        {
+            self.timer.fontscale = 1.5;
+            self.round_timer.fontscale = self.timer.fontscale;
+        }
         level waittill("dvar_changed");
-	}
+    }
 }
 
 fridgecase(wpn)
 {
-	if(level.round_number >= FRIDGE_AND_BANK_ROUND)
+    if(level.round_number >= FRIDGE_AND_BANK_ROUND)
     {
         globalprint("Fridge not allowed after round 15");
-		return;
+        return;
     }
-	
+
     self maps\mp\zombies\_zm_stats::clear_stored_weapondata();
 
     upgraded = IsSubStr(wpn, "+");
@@ -726,18 +776,18 @@ fridgecase(wpn)
 
 award_permaperks_safe()
 {
-	level endon("end_game");
-	self endon("disconnect");
+    level endon("end_game");
+    self endon("disconnect");
 
-	if(level.round_number >= FRIDGE_AND_BANK_ROUND)
-		return;
+    if(level.round_number >= FRIDGE_AND_BANK_ROUND)
+        return;
 
-	while (!isalive(self))
-		wait 0.05;
+    while (!isalive(self))
+        wait 0.05;
 
-	wait 0.5;
+    wait 0.5;
     perks_to_process = [];
-    
+
     perks_to_process[perks_to_process.size] = permaperk_array("revive");
     perks_to_process[perks_to_process.size] = permaperk_array("multikill_headshots");
     perks_to_process[perks_to_process.size] = permaperk_array("perk_lose");
@@ -749,102 +799,102 @@ award_permaperks_safe()
     perks_to_process[perks_to_process.size] = permaperk_array("insta_kill");
     perks_to_process[perks_to_process.size] = permaperk_array("double_points");
 
-	foreach (perk in perks_to_process)
-	{
-		if( !(istranzit() && perk == permaperk_array("box_weapon", array("zm_highrise", "zm_buried"), array("zm_transit"))))
-			self resolve_permaperk(perk);
-		wait 0.05;
-	}
-	if(istranzit())
+    foreach (perk in perks_to_process)
+    {
+        if( !(istranzit() && perk == permaperk_array("box_weapon", array("zm_highrise", "zm_buried"), array("zm_transit"))))
+            self resolve_permaperk(perk);
+        wait 0.05;
+    }
+    if(istranzit())
         level.pers_box_weapon_lose_round = 0;
 
-	wait 0.5;
-	self maps\mp\zombies\_zm_stats::uploadstatssoon();
+    wait 0.5;
+    self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
 permaperk_array(code, maps_award, maps_take, to_round)
 {
-	if (!isDefined(maps_award))
-		maps_award = array("zm_transit", "zm_highrise", "zm_buried");
-	if (!isDefined(maps_take))
-		maps_take = [];
-	if (!isDefined(to_round))
-		to_round = 255;
+    if (!isDefined(maps_award))
+        maps_award = array("zm_transit", "zm_highrise", "zm_buried");
+    if (!isDefined(maps_take))
+        maps_take = [];
+    if (!isDefined(to_round))
+        to_round = 255;
 
-	permaperk = [];
-	permaperk["code"] = code;
-	permaperk["maps_award"] = maps_award;
-	permaperk["maps_take"] = maps_take;
-	permaperk["to_round"] = to_round;
+    permaperk = [];
+    permaperk["code"] = code;
+    permaperk["maps_award"] = maps_award;
+    permaperk["maps_take"] = maps_take;
+    permaperk["to_round"] = to_round;
 
-	return permaperk;
+    return permaperk;
 }
 
 resolve_permaperk(perk)
 {
-	wait 0.05;
+    wait 0.05;
 
-	perk_code = perk["code"];
+    perk_code = perk["code"];
 
-	if (isround(perk["to_round"]))
-		return;
+    if (isround(perk["to_round"]))
+        return;
 
-	if (isinarray(perk["maps_award"], level.script) && !self.pers_upgrades_awarded[perk_code])
-	{
-		for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
-		{
-			stat_name = level.pers_upgrades[perk_code].stat_names[j];
-			stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+    if (isinarray(perk["maps_award"], level.script) && !self.pers_upgrades_awarded[perk_code])
+    {
+        for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
+        {
+            stat_name = level.pers_upgrades[perk_code].stat_names[j];
+            stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
 
-			self award_permaperk(stat_name, perk_code, stat_value);
-		}
-	}
+            self award_permaperk(stat_name, perk_code, stat_value);
+        }
+    }
 
-	if (isinarray(perk["maps_take"], level.script) && self.pers_upgrades_awarded[perk_code])
-		self remove_permaperk(perk_code);
+    if (isinarray(perk["maps_take"], level.script) && self.pers_upgrades_awarded[perk_code])
+        self remove_permaperk(perk_code);
 }
 
 award_permaperk(stat_name, perk_code, stat_value)
 {
-	flag_set("permaperks_were_set");
-	self.stats_this_frame[stat_name] = 1;
-	self maps\mp\zombies\_zm_stats::set_global_stat(stat_name, stat_value);
-	self playsoundtoplayer("evt_player_upgrade", self);
+    flag_set("permaperks_were_set");
+    self.stats_this_frame[stat_name] = 1;
+    self maps\mp\zombies\_zm_stats::set_global_stat(stat_name, stat_value);
+    self playsoundtoplayer("evt_player_upgrade", self);
 }
 
 remove_permaperk(perk_code)
 {
-	self.pers_upgrades_awarded[perk_code] = 0;
-	self playsoundtoplayer("evt_player_downgrade", self);
+    self.pers_upgrades_awarded[perk_code] = 0;
+    self playsoundtoplayer("evt_player_downgrade", self);
 }
 
 bank()
 {
-	flag_wait("initial_blackscreen_passed");
-	if(level.round_number != 1) return;
+    flag_wait("initial_blackscreen_passed");
+    if(level.round_number != 1) return;
 
-	self.account_value = level.bank_account_max;
+    self.account_value = level.bank_account_max;
 }
 
 init_monitor()
 {
     level thread monitor_log();
-	level thread readchat();
-	level thread readtwitchchat();
-	level thread readconsole();
-	level thread drops_grabbed();
-	level thread monitor_round_loop();
+    level thread readchat();
+    level thread readtwitchchat();
+    level thread readconsole();
+    level thread drops_grabbed();
+    level thread monitor_round_loop();
     replacefunc(getfunction("maps/mp/zombies/_zm_powerups", "powerup_grab"), ::powerup_grab);
 
-	flag_wait("initial_blackscreen_passed");
+    flag_wait("initial_blackscreen_passed");
 
-	level.game_start_time = int(gettime() / 1000);
-	if(isorigins())
-	{
-		level thread track_templars();
-		level thread track_panzers();
-	}
-	if(ismob()) level thread track_brutus();
+    level.game_start_time = int(gettime() / 1000);
+    if(isorigins())
+    {
+        level thread track_templars();
+        level thread track_panzers();
+    }
+    if(ismob()) level thread track_brutus();
 }
 
 monitor_log()
@@ -869,9 +919,9 @@ readtwitchchat()
 
     while(true)
     {
-    	level waittill("new_twitch_message", message);
-    	msg = strtok(message, "|");
-		thread commandHandler(msg[1], undefined, true);
+        level waittill("new_twitch_message", message);
+        msg = strtok(message, "|");
+        thread commandHandler(msg[1], undefined, true);
     }
 }
 
@@ -881,25 +931,43 @@ addCommands(commands, alias)
         alias = false;
 
     if(!alias)
-	    foreach(command in commands)
-		    level.commands[level.commands.size] = "!" + command;
+        foreach(command in commands)
+            level.chatcommands[level.chatcommands.size] = "!" + command;
     else
-	    foreach(command in commands)
-		    level.commandsaliases[level.commandsaliases.size] = "!" + command;
+        foreach(command in commands)
+            level.chatcommandsaliases[level.chatcommandsaliases.size] = "!" + command;
 }
 
 readchat()
 {
     level endon("end_game");
-	
-    if(!isdefined(level.commands))
-	    level.commands = [];
-    if(!isdefined(level.commandsaliases))
-	    level.commandsaliases = [];
-    
+
+    if(!isdefined(level.chatcommands))
+        level.chatcommands = [];
+    if(!isdefined(level.chatcommandsaliases))
+        level.chatcommandsaliases = [];
+    // Hacer un tab con info:
+    // Zombis esta ronda
+    // Boxhits
+    // NextSpecialRound
+    // Ronda actual
+    // Downs
+    // Si se ha usado firstbox
+    // SPH actual, Mejor SPH, SPH de la última ronda
+
+    // Hacer un tab para mariconadas
+    // cambiar de personaje
+    // cambiar el camo
+    // cambiar el timer
+    // Activar el timer de trampa
+    // Cambiar el backspeed
+    // Forzar el pap en nuketown
+    // Cambiar la llave en mob
+
+    // Hacer un tab con los tiempos de la partida
     // misc
-    addCommands(array("help", "dg", "backspeed", "boxhits"), false);
-    addCommands(array("bs", "bh"), true);
+    addCommands(array("help", "dg", "backspeed", "boxhits", "boxtracker"), false);
+    addCommands(array("bs", "bh", "bt"), true);
 
     // Timers
     addCommands(array("timer", "time", "times", "roundtime", "sph", "traptimer"), false);
@@ -908,10 +976,11 @@ readchat()
     // special rounds
     addCommands(array("nextleapers", "leapers", "brutus", "panzers", "templars", "nextpanzer", "nexttemplars", "rounders", "nextbrutus"), false);
     addCommands(array("nl", "nextleaper", "nb", "nextbrutus", "np", "nt", "nexttemplar"), true);
+    addCommands(array("frozen"), false);
 
     // Zombies
-    addCommands(array("zc", "tzc"), false);
-    addCommands(array("zombiecount", "totalzombiecount"), true);
+    addCommands(array("zombiecount", "totalzombiecount"), false);
+    addCommands(array("zc", "tzc"), true);
 
     // Set-up
     addCommands(array("fridge", "key", "forcepap", "firstbox", "box"), false);
@@ -919,18 +988,18 @@ readchat()
 
     // Cosmetic
     addCommands(array("character", "papcamo"), false);
-    addCommands(array("c", "pap", "camo"), false);
+    addCommands(array("c", "pap", "camo"), true);
 
     while (true) 
     {
         level waittill("say", message, player);
-		thread commandHandler(message, player, false);
+        thread commandHandler(message, player, false);
     }
 }
 
 readconsole()
 {
-	level endon("end_game");
+    level endon("end_game");
 
     while (true) 
     {
@@ -938,28 +1007,28 @@ readconsole()
         if(dvar != "chat")
             continue;
 
-		thread commandHandler(new, undefined, false);
+        thread commandHandler(new, undefined, false);
     }
 }
 
 commandHandler(org_message, player, twitch)
 {
-	setDvar("chat", "xxxxxxxxxxxx");
-	if(!isdefined(player)) player = gethostplayer();
-	if(!isdefined(twitch)) twitch = false;
+    setDvar("chat", "xxxxxxxxxxxx");
+    if(!isdefined(player)) player = gethostplayer();
+    if(!isdefined(twitch)) twitch = false;
 
 
-	message = tolower(org_message);
+    message = tolower(org_message);
     msg = strtok(message, " ");
 
     if(msg[0][0] != "!")
-		return;
+        return;
 
-	if(!in_array(msg[0], level.commands) && !in_array(msg[0], level.commandsaliases))
-	{
-		globalprint("Unknown command ^1" + org_message + "^7. Try !help");
-		return;
-	}
+    if(!in_array(msg[0], level.chatcommands) && !in_array(msg[0], level.chatcommandsaliases))
+    {
+        globalprint("Unknown command ^1" + org_message + "^7. Try !help");
+        return;
+    }
 
     level notify("monitor_log", message);
     processCommand(msg, player, twitch);
@@ -976,49 +1045,60 @@ processCommand(command, player, twitch)
 
             case "!firstbox": case "!fb": fbcase(command); break;
             case "!box": boxcase(command[1]); break;
+            case "!bt": case "!boxtracker": setDvar("boxhits", !getDvarInt("boxhits")); break;
             case "!character": case "!c": charactercase(player, command[1]); break;
             case "!forcepap": forcepapcase(); break;
 
-		    case "!timer": timercase(command[1]); break;
-		    case "!traptimer": case "!tt": traptimercase(); break;
+            case "!timer": timercase(command[1]); break;
+            case "!traptimer": case "!tt": traptimercase(); break;
 
-		    case "!papcamo": case "!pap": case "!camo": camo(command[1]); break;
+            case "!papcamo": case "!pap": case "!camo": camo(command[1]); break;
 
-		    case "!fridge": case "!f": player fridgecase(command[1]); break;
+            case "!fridge": case "!f": player fridgecase(command[1]); break;
 
             case "!key": keycase(command[1]); break;
 
-		    case "!bs": case "!backspeed": bscase(); break;
+            case "!bs": case "!backspeed": bscase(); break;
 
-		    default: break;
+            default: break;
         }
     }
-	switch(command[0])
-	{
-		case "!zc": case "zombiecount": print_zombies_at_round(command[1], twitch); break;
-		case "!tzc": case "totalzombiecount": total_zombie_count(command[1], command[2], twitch); break;
-		case "!dg": print_drops_grabbed(command[1], twitch); break;
-		case "!bh": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
+    switch(command[0])
+    {
+        case "!zc": case "zombiecount": print_zombies_at_round(command[1], twitch); break;
+        case "!tzc": case "totalzombiecount": total_zombie_count(command[1], command[2], twitch); break;
+        case "!dg": print_drops_grabbed(command[1], twitch); break;
+        case "!bh": case "!boxhits": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
 
 
-		case "!times": print_times(twitch); break;
-		case "!rt": case "!roundtime": print_round_times(command[1], twitch); break;
-		case "!t": case "!time": print_game_time(twitch); break;
-		case "!sph": print_sph(command[1], twitch); break;
+        case "!times": print_times(twitch); break;
+        case "!rt": case "!roundtime": print_round_times(command[1], twitch); break;
+        case "!t": case "!time": print_game_time(twitch); break;
+        case "!sph": print_sph(command[1], twitch); break;
 
-		case "!nb": case "!nextbrutus": next_special_round("Brutus", twitch); break;
-		case "!nt": case "!nexttemplars": case "!nexttemplar": next_special_round("Templar", twitch); break;
-		case "!np": case "!nextpanzer": next_special_round("Panzer", twitch); break;
-		case "!nl": case "!nextleapers": case "!nextleaper": next_special_round("Leaper", twitch); break;
+        case "!nb": case "!nextbrutus": next_special_round("Brutus", twitch); break;
+        case "!nt": case "!nexttemplars": case "!nexttemplar": next_special_round("Templar", twitch); break;
+        case "!np": case "!nextpanzer": next_special_round("Panzer", twitch); break;
+        case "!nl": case "!nextleapers": case "!nextleaper": next_special_round("Leaper", twitch); break;
 
-		case "!rounders": rounderscase(twitch); break;
-		case "!brutus": special_rounds("Brutus", twitch); break;
-		case "!templars": special_rounds("Templar", twitch); break;
-		case "!panzers": special_rounds("Panzer", twitch); break;
-		case "!leapers": special_rounds("Leaper", twitch); break;
+        case "!frozen": frozenrounds(twitch); break;
 
-		default: break;
-	}
+        case "!rounders": rounderscase(twitch); break;
+        case "!brutus": special_rounds("Brutus", twitch); break;
+        case "!templars": special_rounds("Templar", twitch); break;
+        case "!panzers": special_rounds("Panzer", twitch); break;
+        case "!leapers": special_rounds("Leaper", twitch); break;
+
+        default: break;
+    }
+}
+
+frozenrounds(twitch)
+{
+    if(!isorigins())
+        return;
+
+    globalprint("Small frozen rounds: 121, 123, 127, 129, 133, 135, 140,\n141, 143, 150, 152, 153, 154, 162+", twitch);
 }
 
 keycase(loc)
@@ -1077,99 +1157,76 @@ setup_master_key()
 
 tomahawkcase()
 {
-	setDvar("tomahawk", !getDvarInt("tomahawk"));
+    setDvar("tomahawk", !getDvarInt("tomahawk"));
 
-	if(getDvarInt("tomahawk"))
-		globalprint("Players will recieve an upgraded tomahawk when reconnected");
-	else
-		globalprint("Players will not recieve an upgraded tomahawk when reconnected");
+    if(getDvarInt("tomahawk"))
+        globalprint("Players will recieve an upgraded tomahawk when reconnected");
+    else
+        globalprint("Players will not recieve an upgraded tomahawk when reconnected");
 }
 
 forcepapcase()
 {
-	setDvar("forcepap", !getDvarInt("forcepap"));
-	if(getDvarInt("forcepap"))
-	{
-		globalprint("Next restart the game will automatically restart for Pack-A-Punch and JUG location");
-		globalprint("This might crash the game while restarting");
-	}
-	else
-		globalprint("Pack-A-Punch and JUG location will not be manipulated");
+    setDvar("forcepap", !getDvarInt("forcepap"));
+    if(getDvarInt("forcepap"))
+    {
+        globalprint("Next restart the game will automatically restart for Pack-A-Punch and JUG location");
+        globalprint("This might crash the game while restarting");
+    }
+    else
+        globalprint("Pack-A-Punch and JUG location will not be manipulated");
 }
 
 charactercase(who, c)
 {
-	c = string_to_float(c);
-    if(issurvivalmap())
-    {
-		if(c != 1 && c != 2)
-			globalprint("Invalid value, try: 1, 2, 3, 4");
-
-    }
-    else if(!ismob())
-	{
-		if(c != 1 && c != 2 && c != 3 && c != 4)
-		{
-			globalprint("Invalid value, try: 1, 2, 3, 4");
-			return;
-		}
-	}
-	else
-	{
-		if(c != 1 && c != 2 && c != 3 && c != 4 && c != 5)
-		{
-			globalprint("Invalid value, try: 1, 2, 3, 4, 5");
-			return;
-		}
-	}
     who change_player_model(c);
 }
 
 traptimercase()
 {
-	setDvar("traptimer", !getDvarInt("traptimer"));
+    setDvar("traptimer", !getDvarInt("traptimer"));
 }
 
 timercase(pos)
 {
-	if(pos >= 0 && pos < 5)
-		setDvar("timer", pos);
-	else
-		globalprint("Unkown position, please use 1, 2, 3, 4 or 0 to hide the timer");
+    if(pos >= 0 && pos < 5)
+        setDvar("timer", pos);
+    else
+        globalprint("Unkown position, please use 1, 2, 3, 4 or 0 to hide the timer");
 }
 
 bscase()
 {
-	if(getDvarInt("player_strafeSpeedScale") != 1) //	Console
-	{
-		setdvar("player_strafeSpeedScale", 1 );
-		setdvar("player_backSpeedScale", 1 );
-		globalprint("Changed player speed to match console");
-	}
-	else // Steam
-	{
-		setdvar("player_strafeSpeedScale", 0.9 );
-		setdvar("player_backSpeedScale", 0.7 );
-		globalprint("Changed player speed to match steam");
-	}
+    if(getDvarInt("player_strafeSpeedScale") != 1) //	Console
+    {
+        setdvar("player_strafeSpeedScale", 1 );
+        setdvar("player_backSpeedScale", 1 );
+        globalprint("Changed player speed to match console");
+    }
+    else // Steam
+    {
+        setdvar("player_strafeSpeedScale", 0.9 );
+        setdvar("player_backSpeedScale", 0.7 );
+        globalprint("Changed player speed to match steam");
+    }
 }
 
 print_game_time(twitch)
 {
-	time_now = int(gettime() / 1000);
-	game_time = time_now - level.start_time;
-	globalprint("Game time: " + int_to_time(game_time), twitch);
+    time_now = int(gettime() / 1000);
+    game_time = time_now - level.start_time;
+    globalprint("Game time: " + int_to_time(game_time), twitch);
 }
 
 next_special_round(type, twitch)
 {
-	if(!isdefined(level.special_rounds[type]))
-	{
-		globalprint("Not tracking " + type, twitch);
-		return;
-	}
-	if(SROUND_ARRAY(type).size == 0)
-	{
+    if(!isdefined(level.special_rounds[type]))
+    {
+        globalprint("Not tracking " + type, twitch);
+        return;
+    }
+    if(SROUND_ARRAY(type).size == 0)
+    {
         if(level.round_number > SROUND_ARRAY_START_LAST(type))
             globalprint(SROUND_ARRAY_COND(type), twitch);
         else
@@ -1184,12 +1241,12 @@ next_special_round(type, twitch)
             msg += SROUND_ARRAY_START_LAST(type);
             globalprint(msg, twitch);
         }
-		return;
-	}
-    
+        return;
+    }
+
     if(type == "Panzer" && level.players.size != 1)
     {
-	    globalprint("Next Panzer round: " + SROUND_ARRAY_LAST(type) + 3, twitch);
+        globalprint("Next Panzer round: " + SROUND_ARRAY_LAST(type) + 3, twitch);
         return;
     }
 
@@ -1206,45 +1263,45 @@ next_special_round(type, twitch)
 
 print_drops_grabbed(round, twitch)
 {
-	if(!isdefined(round))
-		rnd = level.round_number;
-	else
-		rnd = string_to_float(round);
-	
-	if(rnd > level.round_number)
-		globalprint("You haven't reached round " + rnd + " yet.", twitch);
-	else
+    if(!isdefined(round))
+        rnd = level.round_number;
+    else
+        rnd = string_to_float(round);
+
+    if(rnd > level.round_number)
+        globalprint("You haven't reached round " + rnd + " yet.", twitch);
+    else
         globalprint("Drops grabbed on round " + rnd + ": " + level.drops_grabbed[rnd], twitch);
 }
 
 drops_grabbed()
 {
-	level.drops_grabbed = array();  
+    level.drops_grabbed = array();  
     for(i = 0; i < 300; i++)
         level.drops_grabbed [i] = 0;
-	while(true)
-	{
-		level waittill_any("powerup_grabbed");
-		level.drops_grabbed[level.round_number]++;
-	}
+    while(true)
+    {
+        level waittill_any("powerup_grabbed");
+        level.drops_grabbed[level.round_number]++;
+    }
 }
 
 print_zombies_at_round(round, twitch)
 {
-	if(!isdefined(round))
-		rnd = level.round_number;
-	else
-		rnd = string_to_float(round);
+    if(!isdefined(round))
+        rnd = level.round_number;
+    else
+        rnd = string_to_float(round);
 
     zombies = zombies_at_round(rnd);
     health = zombies_health_at_round(rnd);
-	globalprint("Zombies at round " + rnd + ": " + zombies + ", horedes: " + zombies / 24 + ", health: " + health, twitch);
+    globalprint("Zombies at round " + rnd + ": " + zombies + ", horedes: " + zombies / 24 + ", health: " + health, twitch);
 }
 
 print_sph(round, twitch)
 {
-	rnd = string_to_float(round);
-	globalprint("SPH on round " + rnd + ": " + level.round_times[rnd - 1] / (zombies_at_round(rnd) / 24), twitch);
+    rnd = string_to_float(round);
+    globalprint("SPH on round " + rnd + ": " + level.round_times[rnd - 1] / (zombies_at_round(rnd) / 24), twitch);
 }
 
 zombies_health_at_round(round)
@@ -1253,10 +1310,10 @@ zombies_health_at_round(round)
         rnd = level.round_number;
     else
         rnd = string_to_float(round);
-    
+
     if(rnd < 10)
         return rnd * 100 + 50;
- 
+
     health = 950;
     for(i = 9; i < rnd; i++)
     {
@@ -1271,49 +1328,49 @@ zombies_health_at_round(round)
 
 zombies_at_round(round)
 {
-	if(!isdefined(round))
-		rnd = level.round_number;
-	else
-		rnd = string_to_float(round);
+    if(!isdefined(round))
+        rnd = level.round_number;
+    else
+        rnd = string_to_float(round);
 
-	zombies1p = array(6, 8, 13, 18, 24, 27, 28, 28, 29);
-	zombies2p = array(7, 9, 15, 21, 27, 31, 32, 33, 34);
-	zombies3p = array(9, 10, 18, 25, 32, 38, 40, 43, 45);
-	zombies4p = array(10, 12, 21, 29, 37, 45, 49, 52, 56);
-	if(rnd < 10)
-	{
-		if(level.players.size == 1) return zombies1p[rnd - 1];
-		if(level.players.size == 2) return zombies2p[rnd - 1];
-		if(level.players.size == 3) return zombies3p[rnd - 1];
-		if(level.players.size == 4) return zombies4p[rnd - 1];
-	}
+    zombies1p = array(6, 8, 13, 18, 24, 27, 28, 28, 29);
+    zombies2p = array(7, 9, 15, 21, 27, 31, 32, 33, 34);
+    zombies3p = array(9, 10, 18, 25, 32, 38, 40, 43, 45);
+    zombies4p = array(10, 12, 21, 29, 37, 45, 49, 52, 56);
+    if(rnd < 10)
+    {
+        if(level.players.size == 1) return zombies1p[rnd - 1];
+        if(level.players.size == 2) return zombies2p[rnd - 1];
+        if(level.players.size == 3) return zombies3p[rnd - 1];
+        if(level.players.size == 4) return zombies4p[rnd - 1];
+    }
 
-	switch(level.players.size)
-	{
-		case 1: return int(0.09 * rnd * rnd + 24);
-		case 2: return int(0.09 * 2 * rnd * rnd + 24);
-		case 3: return int(0.09 * 4 * rnd * rnd + 24);
-		case 4: return int(0.09 * 6 * rnd * rnd + 24);
-	}
+    switch(level.players.size)
+    {
+        case 1: return int(0.09 * rnd * rnd + 24);
+        case 2: return int(0.09 * 2 * rnd * rnd + 24);
+        case 3: return int(0.09 * 4 * rnd * rnd + 24);
+        case 4: return int(0.09 * 6 * rnd * rnd + 24);
+    }
 }
 
 print_round_times(round, twitch)
 {
-	if(!isdefined(round))
-		rnd = level.round_number;
-	else
-		rnd = string_to_float(round);
-	if(rnd <= level.round_number)
-	{
-		if (rnd == 1 && level.round_number == 1)
-			globalprint("Round time: " + int_to_time(int(gettime() / 1000) - level.start_time), twitch);
-		else if(rnd == level.round_number)
-			globalprint("Round time: " + int_to_time(int(gettime() / 1000) - level.round_start_time / 1000), twitch);
-		else
-			globalprint("Round time on " + rnd + ": " + int_to_time(level.round_times[rnd - 1]), twitch);
-	}
-	else
-		globalprint("You havent reach round " + rnd + " yet.", twitch);
+    if(!isdefined(round))
+        rnd = level.round_number;
+    else
+        rnd = string_to_float(round);
+    if(rnd <= level.round_number)
+    {
+        if (rnd == 1 && level.round_number == 1)
+            globalprint("Round time: " + int_to_time(int(gettime() / 1000) - level.start_time), twitch);
+        else if(rnd == level.round_number)
+            globalprint("Round time: " + int_to_time(int(gettime() / 1000) - level.round_start_time / 1000), twitch);
+        else
+            globalprint("Round time on " + rnd + ": " + int_to_time(level.round_times[rnd - 1]), twitch);
+    }
+    else
+        globalprint("You havent reach round " + rnd + " yet.", twitch);
 }
 
 monitor_round_loop()
@@ -2037,57 +2094,57 @@ camo(str)
     {
         case "1": case "none": case "no": setDvar("papcamo", 1); globalprint("Pack a punch camo removed"); break;
         case "40": case "mob": case "burning embers": case "burningembers": case "burning": case "motd":
-        if(isorigins() || isburied() || ismob())
-        {
-            setDvar("papcamo", CAMO_MOB);
-            globalprint("Pack-A-Punch camo changed to Burning Embers");
-        } 
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isorigins() || isburied() || ismob())
+                                          {
+                                              setDvar("papcamo", CAMO_MOB);
+                                              globalprint("Pack-A-Punch camo changed to Burning Embers");
+                                          } 
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         case "39": case "greenrun":
-        setDvar("papcamo", CAMO_GREEN_RUN);
-        globalprint("Pack-A-Punch camo changed to Green Run");
-        break;
+                                          setDvar("papcamo", CAMO_GREEN_RUN);
+                                          globalprint("Pack-A-Punch camo changed to Green Run");
+                                          break;
         case "41": case "aqua": 
-        if(isorigins() || isburied())
-        {
-            setDvar("papcamo", CAMO_AQUA );
-            globalprint("Pack a punch camo changed to Aqua");
-        }
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isorigins() || isburied())
+                                          {
+                                              setDvar("papcamo", CAMO_AQUA );
+                                              globalprint("Pack a punch camo changed to Aqua");
+                                          }
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         case "42": case "breach":
-        if(isburied() || isorigins())
-        {
-            setDvar("papcamo", CAMO_BREACH);
-            globalprint("Pack-A-Punch camo changed to Breach");
-        }
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isburied() || isorigins())
+                                          {
+                                              setDvar("papcamo", CAMO_BREACH);
+                                              globalprint("Pack-A-Punch camo changed to Breach");
+                                          }
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         case "43": case "coyote":
-        if(isburied() || isorigins())
-        {
-            setDvar("papcamo", CAMO_COYOTE);
-            globalprint("Pack-A-Punch camo changed to Coyote");
-        }
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isburied() || isorigins())
+                                          {
+                                              setDvar("papcamo", CAMO_COYOTE);
+                                              globalprint("Pack-A-Punch camo changed to Coyote");
+                                          }
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         case "44": case "glam":
-        if(isburied() || isorigins())
-        {
-            setDvar("papcamo", CAMO_GLAM);
-            globalprint("Pack-A-Punch camo changed to Glam");
-        }
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isburied() || isorigins())
+                                          {
+                                              setDvar("papcamo", CAMO_GLAM);
+                                              globalprint("Pack-A-Punch camo changed to Glam");
+                                          }
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         case "45": case "origins":
-        if(isorigins())
-        {
-            setDvar("papcamo", CAMO_ORIGINS);
-            globalprint("Pack-A-Punch camo changed to Ice Crystal");
-        }
-        else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
-        break;
+                                          if(isorigins())
+                                          {
+                                              setDvar("papcamo", CAMO_ORIGINS);
+                                              globalprint("Pack-A-Punch camo changed to Ice Crystal");
+                                          }
+                                          else globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help");
+                                          break;
         default: globalprint("Unable to switch Pack-A-Punch camo, try !papcamo help"); break;
     }
 }
@@ -2203,6 +2260,10 @@ raygunDisplay()
     while(true)
     {
         level waittill_any("box_spin_done", "dvar_changed");
+        level.total_mk2_display.alpha = getDvarInt("boxhits");
+        level.total_ray_display.alpha = getDvarInt("boxhits");
+        level.boxhits.alpha = getDvarInt("boxhits");
+
         if(getDvarInt("avg"))
         {
             level.total_mk2_display.label = &"^3Mark 2 AVG: ^5";

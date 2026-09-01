@@ -1,0 +1,30 @@
+init()
+{
+    precachemodel("c_zom_arlington_coat_viewhands");
+    precachemodel("c_zom_deluca_longsleeve_viewhands");
+    precachemodel("c_zom_dempsey_viewhands");
+    precachemodel("c_zom_engineer_viewhands");
+    precachemodel("c_zom_farmgirl_viewhands");
+    precachemodel("c_zom_ghost_viewhands");
+    precachemodel("c_zom_handsome_sleeveless_viewhands");
+    precachemodel("c_zom_nikolai_viewhands");
+    precachemodel("c_zom_oldman_viewhands");
+    precachemodel("c_zom_oleary_shortsleeve_viewhands");
+    precachemodel("c_zom_player_arlington_fb");
+    precachemodel("c_zom_player_cdc_fb");
+    precachemodel("c_zom_player_deluca_fb");
+    precachemodel("c_zom_player_engineer_dlc1_fb");
+    precachemodel("c_zom_player_farmgirl_dlc1_fb");
+    precachemodel("c_zom_player_handsome_fb");
+    precachemodel("c_zom_player_oldman_dlc1_fb");
+    precachemodel("c_zom_player_oleary_fb");
+    precachemodel("c_zom_player_reporter_dlc1_fb");
+    precachemodel("c_zom_reporter_viewhands");
+    precachemodel("c_zom_richtofen_viewhands");
+    precachemodel("c_zom_suit_viewhands");
+    precachemodel("c_zom_takeo_viewhands");
+    precachemodel("c_zom_tomb_dempsey_fb");
+    precachemodel("c_zom_tomb_nikolai_fb");
+    precachemodel("c_zom_tomb_richtofen_fb");
+    precachemodel("c_zom_tomb_takeo_fb");
+}
