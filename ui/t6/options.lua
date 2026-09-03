@@ -572,5 +572,39 @@ LUI.createMenu.OptionsMenu = function ( f43_arg0 )
 	f43_local0:addSelectButton()
 	f43_local0:addBackButton()
 	CoD.Options.AddOptionCategories( f43_local0 )
+
+	-- FIX (tarea: mostrar la ronda actual al pausar la partida): este
+	-- bloque existe en el options.lua original del juego (LUI.createMenu.OptionsMenu)
+	-- pero faltaba por completo en la version de este mod — no se creo de
+	-- cero, se ha restaurado. Se mantiene la misma posicion/estilo que
+	-- tenia en el original (esquina superior derecha, misma fuente y
+	-- alineacion). Lo unico que cambia es la fuente del dato:
+	--   - El original leia el dvar "ui_zm_round", que no existe en este
+	--     entorno (comprobado: nunca se define en Plutonium/este mod).
+	--   - "xoia_info_round" SI existe y se actualiza en tiempo real
+	--     (Xoia_ui.gsc::update_info_dvars() lo fija cada segundo con
+	--     setdvar("xoia_info_round", level.round_number)) — es el mismo
+	--     dvar que ya usan el tab INFO y el texto equivalente en XoiaMenu
+	--     (optionsxoia.lua), asi que no se duplica ningun sistema nuevo,
+	--     solo se reutiliza el que ya existe en el proyecto.
+	-- Tambien se reutiliza la misma clave de localizacion ya creada para
+	-- este mismo texto en XoiaMenu (XOIA_MENU_PAUSED_AT_ROUND), en vez de
+	-- dejar el string sin localizar como estaba en el original.
+	if UIExpression.IsInGame() == 1 and CoD.isZombie == true then
+		local f43_local_roundText = LUI.UIText.new()
+
+		f43_local_roundText:setLeftRight( true, true, 0, 0 )
+		f43_local_roundText:setTopBottom( true, false, 40, 40 + CoD.textSize.Default )
+		f43_local_roundText:setFont( CoD.fonts.Default )
+		f43_local_roundText:setAlignment( LUI.Alignment.Center )
+
+		local currentRound = UIExpression.DvarInt( f43_arg0, "xoia_info_round" )
+		if currentRound == nil then currentRound = 0 end
+
+		f43_local_roundText:setText( Engine.Localize( "XOIA_MENU_PAUSED_AT_ROUND" ) .. " " .. tostring( currentRound ) )
+
+		f43_local0:addElement( f43_local_roundText )
+	end
+
 	return f43_local0
 end

@@ -409,7 +409,20 @@ end
 
 LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     local menu = CoD.Menu.New("XoiaMenu")
-    menu:addTitle( Engine.Localize("ST_MENU_TITLE"), LUI.Alignment.Center )
+
+    -- FIX (pedido por el usuario): "XOIA" es accesible tanto en pausa
+    -- (options.lua, rama in-game) como desde el menu principal (misma
+    -- funcion, rama no in-game) — asi que el titulo debe alinearse segun
+    -- el contexto en el que se abra, no siempre igual. En pausa, a la
+    -- izquierda (igual que el resto de menus, donde lo hace
+    -- CoD.InGameMenu.New automaticamente); en el menu principal, centrado.
+    local isInGame = UIExpression.IsInGame( LocalClientIndex ) == 1
+
+    if isInGame then
+        menu:addTitle( Engine.Localize("XOIA_MENU_TITLE"), LUI.Alignment.Left )
+    else
+        menu:addTitle( Engine.Localize("XOIA_MENU_TITLE"), LUI.Alignment.Center )
+    end
 
     menu:addBackButton()
     menu:registerEventHandler("button_prompt_back", CoD.Xoia.Back )
@@ -419,8 +432,6 @@ LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     CoD.Xoia.AddPausedAtRoundText( menu, LocalClientIndex )
 
     local SettingsTabs = CoD.Options.SetupTabManager( menu, 500 )
-
-    local isInGame = UIExpression.IsInGame( LocalClientIndex ) == 1
 
     SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_TIMES"), CoD.Xoia.CreateTimesTab)
     SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_COSMETICS"), CoD.Xoia.CreateCosmeticsTab)
