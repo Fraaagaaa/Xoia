@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 set MOD_NAME=zm_xoia
 set GAME_FOLDER=C:\Program Files (x86)\Steam\steamapps\common\Call of Duty Black Ops II
@@ -53,7 +53,7 @@ set MOD_DEST=%LOCALAPPDATA%\Plutonium\storage\t6\mods\%MOD_NAME%
 
 set err=%ERRORLEVEL%
 
-if %err% EQU 0 (
+if !err! EQU 0 (
 
     if not exist "%MOD_DEST%" mkdir "%MOD_DEST%"
 
@@ -68,12 +68,12 @@ if %err% EQU 0 (
 
     pushd "%MOD_BASE%"
     "%WINRAR%" a -afzip -r "mod.iwd" "ui\*"
-    set RAR_ERR=%ERRORLEVEL%
+    set RAR_ERR=!ERRORLEVEL!
     popd
 
-    if not %RAR_ERR% EQU 0 (
+    if not !RAR_ERR! EQU 0 (
         COLOR C
-        echo ERROR: No se pudo crear mod.iwd
+        echo ERROR: No se pudo crear mod.iwd ^(codigo !RAR_ERR!^)
         pause
         exit /b 1
     )
@@ -108,30 +108,15 @@ if %err% EQU 0 (
     del /Q "%MOD_BASE%\mod.iwd"
 
     echo.
-    echo ==========================
-    echo       XOIA BUILD OK
-    echo ==========================
-    echo.
-    echo Mod instalado en:
-    echo %MOD_DEST%
-    echo.
-pause
+    echo Build completado correctamente.
 
 ) ELSE (
     COLOR C
     echo.
-    echo ==========================
-    echo       LINKER FAILED
-    echo ==========================
-    echo.
-    echo ERROR: El linker no pudo cargar una o mas zones.
-    echo Comprueba GAME_FOLDER:
-    echo %GAME_FOLDER%
+    echo ERROR: linker.exe fallo con codigo de salida !err!
+    echo Revisa el log de OAT/linker.exe mas arriba para ver el motivo exacto.
     echo.
     pause
 )
-pause
 
 endlocal
-
-pause

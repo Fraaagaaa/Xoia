@@ -2,11 +2,13 @@
 #include maps\mp\_utility;
 #include maps\mp\zombies\_zm_utility;
 
+#define DEBUG 1
+
 init()
 {
     level thread update_info_dvars();
     level thread init_menu_system();
-    register_menu_handler( "character", ::on_character_menu );
+    register_menu_handler( "character", ::change_player_model_menu);
 }
 
 update_info_dvars()
@@ -65,14 +67,15 @@ menu_dispatcher()
     while ( true )
     {
         self waittill( "menuresponse", menu, response );
-        self IPrintLn("new response");
+
+        if(DEBUG) println("new response");
+
         if (!isdefined(menu) || !isdefined(response) || menu != "restartgamepopup")
         {
             self IPrintLn("Not right menu");
             continue;
         }
 
-        // especificar modulo
         if (!issubstr(response, "xoia+"))
         {
             self IPrintLn("No right module");
@@ -80,7 +83,6 @@ menu_dispatcher()
         }
 
         self handle_menu_response(response);
-        self IPrintLn("handling response");
     }
 }
 
@@ -88,7 +90,6 @@ handle_menu_response(response)
 {
     notification = strtok( response, "+" );
 
-    self IPrintLn("menu_response");
     if (!isdefined(notification) || notification.size < 3 || notification[0] != "xoia")
         return;
 
@@ -103,8 +104,19 @@ handle_menu_response(response)
     if (!isdefined(level.xoia_menu_handlers[module]))
         return;
 
+    if(DEBUG)
+    {
+        println("^2handle_menu_response()");
+        if(isdefined(module))
+            println("module: " + module);
+        if(isdefined(action))
+            println("action: " + action);
+    
+        for(i = 0; i < args.size; i++)
+            println("arg " + i + ": " + args[i]);
+    }
+
     self thread [[level.xoia_menu_handlers[module]]](action, args);
-    self IPrintLn("menu_response 2");
 }
 
 menu_set(arg)

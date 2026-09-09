@@ -3,7 +3,7 @@
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\_utility;
 
-#define DEBUG 0
+#define DEBUG 1
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
@@ -140,13 +140,6 @@ isround(round)
 
 init()
 {
-	createdvars();
-	level thread dvar_tracker();
-	level thread init_anticheat();
-	level thread init_hud();
-	level thread init_camos();
-	level thread init_monitor();
-
     if(DEBUG)
     {
         if( level.player_out_of_playable_area_monitor && IsDefined( level.player_out_of_playable_area_monitor ) )
@@ -155,6 +148,15 @@ init()
         level.player_too_many_players_check = 0;
         setDvar("sv_cheats", 1);
     }
+
+	level thread createdvars();
+	level thread dvar_tracker();
+	level thread init_anticheat();
+	level thread init_hud();
+	level thread init_camos();
+	level thread init_monitor();
+
+    println("init xoia");
 
 	level thread connected();
 
@@ -277,10 +279,23 @@ watch_stat(stat)
     }
 }
 
+change_player_model_menu(_, desired_character)
+{
+    if(desired_character.size > 1)
+    {
+        if(DEBUG)
+        {
+            println("^2change_player_model_menu()");
+            println("^1 The arguments for changing player model must be of size 1");
+        }
+        return;
+    }
+    change_player_model(int(desired_character[0]));
+}
+
 change_player_model(desired_character)
 {
-    level endon("end_game");
-    self endon("disconnect");
+    // puede que estemos pasando un string
 
     // FIX (punto 5 del encargo): antes esta funcion cambiaba el modelo pero
     // no guardaba en ningun sitio que personaje habia elegido el jugador.
@@ -289,7 +304,12 @@ change_player_model(desired_character)
     // valor en el propio jugador para poder reaplicarlo en cada respawn
     // (ver reapply_character_on_spawn() mas abajo).
     self.xoia_character = desired_character;
-
+    if(DEBUG)
+    {
+        println("^2change_player_model()");
+        println("self.xoia_character = " + self.xoia_character);
+        println("desired_character = " + desired_character);
+    }
     switch(desired_character)
     {
         case MISTY:

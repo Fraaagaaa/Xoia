@@ -1,10 +1,19 @@
 FILENOTES           "TRANSLATED BY BONECRUSHER"
 
-REFERENCE           XOIA_MENU_TAB_TIMES
-LANG_ENGLISH        "TIMES"
+REFERENCE           XOIA_MENU_TITLE
+LANG_ENGLISH        "XOIA"
 
-REFERENCE           XOIA_MENU_TAB_COSMETICS
-LANG_ENGLISH        "COSMETICS"
+REFERENCE           XOIA_MENU_PAUSED_AT_ROUND
+LANG_ENGLISH        "PAUSED AT ROUND:"
+
+REFERENCE           XOIA_MENU_TAB_MAP
+LANG_ENGLISH        "MAP"
+
+REFERENCE           XOIA_MENU_TAB_CONFIG
+LANG_ENGLISH        "CONFIG"
+
+REFERENCE           XOIA_MENU_TAB_TRACKERS
+LANG_ENGLISH        "TRACKERS"
 
 REFERENCE           XOIA_MENU_TAB_INFO
 LANG_ENGLISH        "INFO"
@@ -152,5 +161,55 @@ LANG_ENGLISH        "ICE CRYSTAL"
 
 REFERENCE           XOIA_MENU_COSMETIC_CAMO_NOCAMO
 LANG_ENGLISH        "NONE"
+
+// TRACKERS
+
+REFERENCE           XOIA_MENU_TRACKER_RESET
+LANG_ENGLISH        "RESET"
+
+REFERENCE           XOIA_MENU_TRACKER_RESET_DESC
+LANG_ENGLISH        "The game constantly tracks every active element on the map (zombies, items, doors) and adds them to an internal memory counter 20 times per second. If you survive long enough, this counter reaches its mathematical limit and overflows, causing the game to force a restart back to Round 1 instead of crashing."
+
+REFERENCE           XOIA_MENU_TRACKER_SCRIPT_USAGE
+LANG_ENGLISH        "GSC USAGE"
+
+REFERENCE           XOIA_MENU_TRACKER_SCRIPT_USAGE_DESC
+LANG_ENGLISH        "These appear when the game creates invisible threads to execute tasks (like using the mystery box) and forgets to close them when finished. These inactive threads accumulate in the background until the virtual machine crashes."
+
+REFERENCE           XOIA_MENU_TRACKER_ENTITY_USAGE
+LANG_ENGLISH        "GSPAWN"
+
+REFERENCE           XOIA_MENU_TRACKER_ENTITY_USAGE_DESC
+LANG_ENGLISH        "This occurs when the maximum limit of elements or objects that can exist simultaneously in the game is exceeded. It frequently happens when the game incorrectly registers and deletes zombies before they physically appear."
+
+REFERENCE           XOIA_MENU_TRACKER_ANIM_INFO
+LANG_ENGLISH        "ANIMATION ERROR"
+
+REFERENCE           XOIA_MENU_TRACKER_ANIM_INFO_DESC
+LANG_ENGLISH        "This is caused by a defect in the function responsible for clearing animations, which is especially noticeable with the robots on Origins. The command that should free up space does exactly the opposite, saturating the memory."
+
+REFERENCE           XOIA_MENU_TRACKER_MEM_USAGE
+LANG_ENGLISH        "HUNK ERROR"
+
+REFERENCE           XOIA_MENU_TRACKER_MEM_USAGE_DESC
+LANG_ENGLISH        "The system runs out of memory by accumulating routine actions like swapping weapons or knifing. The game allocates memory space to process these actions but never frees it."
+
+REFERENCE           XOIA_MENU_TRACKER_STRING_USAGE
+LANG_ENGLISH        "MEMORY TREE ERROR"
+
+REFERENCE           XOIA_MENU_TRACKER_STRING_USAGE_DESC
+LANG_ENGLISH        "This happens when elements, such as zombies, are incorrectly deleted from the map, leaving residual data behind. When the memory structure storing this information becomes saturated, the game crashes."
+
+REFERENCE           XOIA_MENU_TRACKER_VIEW_ANGLES
+LANG_ENGLISH        "ROTATION ANGLE ROUNDING"
+
+REFERENCE           XOIA_MENU_TRACKER_VIEW_ANGLES_DESC
+LANG_ENGLISH        "Continuously turning the camera in the same direction causes the game's rotation memory to lose precision, making your aim feel laggy and unresponsive (Aim Lag). If the rotation counter reaches its maximum limit (32,768 full rotations), your camera permanently locks and cannot move left or right anymore (Aim Lock)."
+
+REFERENCE           XOIA_MENU_TRACKER_SOUNDDONE_REFCOUNT
+LANG_ENGLISH        "SOUND FREEZE"
+
+REFERENCE           XOIA_MENU_TRACKER_SOUNDDONE_REFCOUNT_DESC
+LANG_ENGLISH        "The game freezes simply from killing too many zombies exactly when they emit a sound. The system is unable to discard that audio effect file and eventually crashes after accumulating thousands of them."
 
 ENDMARKER

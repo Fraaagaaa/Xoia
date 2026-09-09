@@ -165,11 +165,9 @@ CoD.Xoia.send_response = function ( controller, module, action, args )
     Engine.SendMenuResponse( controller, "restartgamepopup", payload )
 end
 
--- PESTAÑA 1: TIMES
--- FIX (pedido por el usuario): "PAUSE HARD" se ha movido a options.lua,
--- junto a los botones de Ajustes/Controles/XOIA (mismo sitio que en el
--- menu de pausa original del juego). Ya no vive dentro del menu XOIA.
-CoD.Xoia.CreateTimesTab = function ( Tab, LocalClientIndex )
+-- PESTAÑA 1: MAPA
+-- Pestaña vacía a propósito (placeholder para contenido futuro).
+CoD.Xoia.CreateMapTab = function ( Tab, LocalClientIndex )
     CoD.Xoia.RefreshMapFlags()
 	local Container = LUI.UIContainer.new()
 	local ButtonList = CoD.Options.CreateButtonList()
@@ -177,19 +175,13 @@ CoD.Xoia.CreateTimesTab = function ( Tab, LocalClientIndex )
 	Tab.buttonList = ButtonList
 	Container:addElement( ButtonList )
 
-    -- TODO no verificado: "tiempos de la partida" (game/round/trap timers en
-    -- pantalla) no tenia mas especificacion en el comentario original que
-    -- "hacer un tab". Los timers de HUD ya existen como dvars ("timer",
-    -- "traptimer", etc.) gestionados en Xoia.gsc; si quieres que aqui se
-    -- muestren tiempos concretos (p.ej. duracion de la ronda actual,
-    -- tiempo total de partida) dime el formato exacto que quieres y lo
-    -- añado con un addInfo() como en el tab de INFO.
+    -- Intencionadamente vacío.
 
     return Container
 end
 
--- PESTAÑA 2: Cosmetics
-CoD.Xoia.CreateCosmeticsTab = function ( Tab, LocalClientIndex )
+-- PESTAÑA 2: Configuración (contenido anteriormente en "Cosmetics")
+CoD.Xoia.CreateConfigTab = function ( Tab, LocalClientIndex )
     CoD.Xoia.RefreshMapFlags()
     local Container = LUI.UIContainer.new()
     local ButtonList = CoD.Options.CreateButtonList()
@@ -342,7 +334,75 @@ CoD.Xoia.CreateCosmeticsTab = function ( Tab, LocalClientIndex )
     return Container
 end
 
--- PESTAÑA 3: INFO
+-- PESTAÑA 3: TRACKERS
+CoD.Xoia.CreateTrackersTab = function ( Tab, LocalClientIndex )
+    CoD.Xoia.RefreshMapFlags()
+    local Container = LUI.UIContainer.new()
+    local ButtonList = CoD.Options.CreateButtonList()
+
+    Tab.buttonList = ButtonList
+    Container:addElement( ButtonList )
+
+    local Tracker1Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_RESET"),
+        "cg_drawReset",
+        Engine.Localize("XOIA_MENU_TRACKER_RESET_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker1Choice, 0 )
+
+    local Tracker2Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_SCRIPT_USAGE"),
+        "cg_drawScriptUsage",
+        Engine.Localize("XOIA_MENU_TRACKER_SCRIPT_USAGE_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker2Choice, 0 )
+
+    local Tracker3Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_ENTITY_USAGE"),
+        "cg_drawEntityUsage",
+        Engine.Localize("XOIA_MENU_TRACKER_ENTITY_USAGE_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker3Choice, 0 )
+
+    local Tracker4Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_ANIM_INFO"),
+        "cg_drawAnimInfo",
+        Engine.Localize("XOIA_MENU_TRACKER_ANIM_INFO_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker4Choice, 0 )
+
+    local Tracker5Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_MEM_USAGE"),
+        "cg_drawMemUsage",
+        Engine.Localize("XOIA_MENU_TRACKER_MEM_USAGE_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker5Choice, 0 )
+
+    local Tracker6Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_STRING_USAGE"),
+        "cg_drawStringUsage",
+        Engine.Localize("XOIA_MENU_TRACKER_STRING_USAGE_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker6Choice, 0 )
+
+    local Tracker7Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_VIEW_ANGLES"),
+        "cg_drawViewAngles",
+        Engine.Localize("XOIA_MENU_TRACKER_VIEW_ANGLES_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker7Choice, 0 )
+
+    local Tracker8Choice = ButtonList:addHardwareProfileLeftRightSelector(
+        Engine.Localize("XOIA_MENU_TRACKER_SOUNDDONE_REFCOUNT"),
+        "cg_drawSounddoneRefCount",
+        Engine.Localize("XOIA_MENU_TRACKER_SOUNDDONE_REFCOUNT_DESC")
+    )
+    CoD.Xoia.AddChoices_OnOrOff( Tracker8Choice, 0 )
+
+    return Container
+end
+
+-- PESTAÑA 4: INFO
 CoD.Xoia.CreateInfoTab = function ( Tab, LocalClientIndex )
     CoD.Xoia.RefreshMapFlags()
     local Container = LUI.UIContainer.new()
@@ -433,14 +493,12 @@ LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
 
     local SettingsTabs = CoD.Options.SetupTabManager( menu, 500 )
 
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_TIMES"), CoD.Xoia.CreateTimesTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_COSMETICS"), CoD.Xoia.CreateCosmeticsTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_INFO"), CoD.Xoia.CreateInfoTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_config"), CoD.Xoia.CreateConfigTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_map"), CoD.Xoia.CreateMapTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_trackers"), CoD.Xoia.CreateTrackersTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_info"), CoD.Xoia.CreateInfoTab)
 
-    local maxTabs = 2
-    if isInGame then
-        maxTabs = 5
-    end
+    local maxTabs = 4
 
     if CoD.Xoia.CurrentTabIndex and CoD.Xoia.CurrentTabIndex <= maxTabs then
         SettingsTabs:loadTab(LocalClientIndex, CoD.Xoia.CurrentTabIndex)
@@ -520,3 +578,6 @@ LUI.createMenu.XoiaSync = function ( LocalClientIndex )
 
     return menu
 end
+    --   cg_drawChecksums "0"
+    --   cg_drawDisconnect "1"
+    --   cg_drawVelocity "0" Velocity
