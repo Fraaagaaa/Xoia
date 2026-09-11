@@ -8,7 +8,8 @@ init()
 {
     level thread update_info_dvars();
     level thread init_menu_system();
-    register_menu_handler( "character", ::change_player_model_menu);
+    register_menu_handler( "character", ::on_character_menu );
+    register_menu_handler( "game_monitor", ::on_game_monitor_menu);
 }
 
 update_info_dvars()
@@ -128,17 +129,6 @@ menu_set(arg)
     self.xoia_menu_settings[entry[0]] = entry[1];
 }
 
-// FIX: antes esta funcion solo guardaba el indice via
-// xoia_character_menu_set(), que ademas tenia un bug (esperaba formato
-// "clave:valor" igual que menu_set()/HUD, pero el modulo "character" manda
-// el indice desnudo sin ":", asi que strtok() devolvia un array de 1
-// elemento y la funcion salia sin hacer nada). Ademas, aunque el parseo
-// hubiera funcionado, xoia_character_menu_set() SOLO guardaba
-// self.xoia_character, nunca llamaba a change_player_model() -> el modelo
-// no se aplicaba nunca aunque el valor se hubiese guardado bien.
-// change_player_model() ya hace las dos cosas (guarda self.xoia_character
-// Y aplica el modelo), asi que llamarla directamente evita duplicar esa
-// logica aqui.
 on_character_menu( action, args )
 {
     if ( args.size == 0 )
@@ -148,6 +138,24 @@ on_character_menu( action, args )
         return;
 
     self thread scripts\zm\Xoia::change_player_model( int( args[0] ) );
+}
+
+on_game_monitor_menu(action, args)
+{
+    if(DEBUG)
+    {
+        println("action = " + action);
+        println("args.size = " + args.size);
+        for(i = 0; i < args.size; i++)
+            println("arg " + i + ": " + args[i]);
+    }
+    if ( args.size == 0 )
+        return;
+
+    if ( action != "set" && action != "sync" )
+        return;
+
+    self thread commandHandler( "!" + args[0], self, false );
 }
 
 register_menu_handler( module_name, callback )

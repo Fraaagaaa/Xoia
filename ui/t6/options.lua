@@ -54,17 +54,12 @@ CoD.Options.OpenControls = function ( f5_arg0, f5_arg1 )
 end
 
 CoD.Options.PauseHard = function ( f4_arg0, f4_arg1 )
-	-- Restaurado desde el options.lua original del juego: "PAUSE HARD" es
-	-- un comando de consola nativo del motor, no necesita GSC.
 	Engine.Exec( f4_arg1.controller, "pause_hard" )
 end
 
 CoD.Options.OpenStratTesterSettings = function ( f_arg0, f_arg1 )
 	if f_arg0:getParent() then
 		f_arg0:saveState()
-		-- FIX: el menu de este mod se llama "XoiaMenu" (ver LUI.createMenu.XoiaMenu
-		-- en T6.Menus.optionsxoia). "StratTesterMenu" era el nombre del mod de
-		-- referencia y nunca se renombro, por lo que el boton XOIA no abria nada.
 		f_arg0:openMenu( "XoiaMenu", f_arg1.controller )
 		f_arg0:close()
 	end
@@ -517,11 +512,6 @@ CoD.Options.AddOptionCategories = function ( f42_arg0 )
 
 		f42_local1 = f42_local2:addButton( Engine.Localize( "MENU_CONTROLS_CAPS" ) )
 		f42_local1:setActionEventName( "open_controls" )
-
-		-- FIX (pedido por el usuario): "PAUSE HARD" vivia en la pestaña
-		-- Times del menu XOIA. El juego base ya tiene este mismo boton
-		-- aqui mismo, junto a Ajustes/Controles/XOIA, asi que lo movemos a
-		-- este mismo sitio en vez de duplicarlo en un menu aparte.
 		local f42_local_pause = f42_local2:addButton( "PAUSE HARD" )
 		f42_local_pause:setActionEventName( "pause_hard" )
 
@@ -573,23 +563,6 @@ LUI.createMenu.OptionsMenu = function ( f43_arg0 )
 	f43_local0:addBackButton()
 	CoD.Options.AddOptionCategories( f43_local0 )
 
-	-- FIX (tarea: mostrar la ronda actual al pausar la partida): este
-	-- bloque existe en el options.lua original del juego (LUI.createMenu.OptionsMenu)
-	-- pero faltaba por completo en la version de este mod — no se creo de
-	-- cero, se ha restaurado. Se mantiene la misma posicion/estilo que
-	-- tenia en el original (esquina superior derecha, misma fuente y
-	-- alineacion). Lo unico que cambia es la fuente del dato:
-	--   - El original leia el dvar "ui_zm_round", que no existe en este
-	--     entorno (comprobado: nunca se define en Plutonium/este mod).
-	--   - "xoia_info_round" SI existe y se actualiza en tiempo real
-	--     (Xoia_ui.gsc::update_info_dvars() lo fija cada segundo con
-	--     setdvar("xoia_info_round", level.round_number)) — es el mismo
-	--     dvar que ya usan el tab INFO y el texto equivalente en XoiaMenu
-	--     (optionsxoia.lua), asi que no se duplica ningun sistema nuevo,
-	--     solo se reutiliza el que ya existe en el proyecto.
-	-- Tambien se reutiliza la misma clave de localizacion ya creada para
-	-- este mismo texto en XoiaMenu (XOIA_MENU_PAUSED_AT_ROUND), en vez de
-	-- dejar el string sin localizar como estaba en el original.
 	if UIExpression.IsInGame() == 1 and CoD.isZombie == true then
 		local f43_local_roundText = LUI.UIText.new()
 

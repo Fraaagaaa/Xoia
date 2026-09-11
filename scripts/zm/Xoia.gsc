@@ -2,6 +2,7 @@
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\_utility;
+#include maps\mp\zombies\_clientfield;
 
 #define DEBUG 1
 #define VERSION "1.0"
@@ -9,6 +10,10 @@
 
 #define FILE_MONITOR "xoia/monitor.log"
 #define FILE_TWITCH_SEND "twitch/send_to_twitch.txt"
+
+#define STAT_CHAR_MAP "zm_highrise"
+#define STAT_CHAR "clip"
+#define DESIRED_CHARACTER self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_CHAR, STAT_CHAR_MAP)
 
 #define CLEAR_WATERMARK_ROUND 10
 #define MAX_FB_ROUND 7
@@ -285,32 +290,22 @@ change_player_model_menu(_, desired_character)
     {
         if(DEBUG)
         {
-            println("^2change_player_model_menu()");
-            println("^1 The arguments for changing player model must be of size 1");
+            println("change_player_model_menu()");
+            println("The arguments for changing player model must be of size 1");
         }
         return;
     }
+    println("change_player_model_menu()");
+    println("everything fine: " + desired_character[0]);
     change_player_model(int(desired_character[0]));
 }
 
 change_player_model(desired_character)
 {
-    // puede que estemos pasando un string
+    if(isdefined(desired_character))
+        self maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR, desired_character, STAT_CHAR_MAP);
 
-    // FIX (punto 5 del encargo): antes esta funcion cambiaba el modelo pero
-    // no guardaba en ningun sitio que personaje habia elegido el jugador.
-    // Al reaparecer (revive / nueva ronda) el juego resetea el modelo del
-    // jugador al de por defecto y la seleccion se perdia. Guardamos el
-    // valor en el propio jugador para poder reaplicarlo en cada respawn
-    // (ver reapply_character_on_spawn() mas abajo).
-    self.xoia_character = desired_character;
-    if(DEBUG)
-    {
-        println("^2change_player_model()");
-        println("self.xoia_character = " + self.xoia_character);
-        println("desired_character = " + desired_character);
-    }
-    switch(desired_character)
+    switch(DESIRED_CHARACTER)
     {
         case MISTY:
             self setmodel( "c_zom_player_farmgirl_dlc1_fb" );
@@ -379,17 +374,6 @@ change_player_model(desired_character)
     }
 }
 
-// FIX v2 (el jugador reporta que "al reaparecer nunca se devuelve el
-// personaje"): la version anterior solo escuchaba "spawned_player" en
-// bucle. Pero en el resto de Xoia.gsc, "spawned_player" SIEMPRE se usa con
-// un unico waittill (linea 197 en connected(), y en spawned() mas abajo),
-// nunca en bucle -> todo indica que en este mod solo se notifica UNA VEZ
-// por jugador (el primer spawn de la partida), no en cada revive/ronda.
-// Un jugador que muere del todo (se desangra sin que lo revivan) no
-// "respawnea" hasta EMPEZAR LA SIGUIENTE RONDA -> ese es el punto real de
-// reaparicion. Xoia.gsc ya usa "start_of_round" de forma fiable en varios
-// sitios (busca "level waittill(\"start_of_round\")"), asi que lo usamos
-// como segunda via, ademas de mantener el primer spawn por si acaso.
 reapply_character_on_spawn()
 {
     level endon("end_game");
@@ -397,17 +381,14 @@ reapply_character_on_spawn()
 
     // Primer spawn de la partida.
     self waittill("spawned_player");
-    if(isdefined(self.xoia_character))
+
+    if(isdefined(DESIRED_CHARACTER))
     {
         wait 0.05;
-        self change_player_model(self.xoia_character);
+        self change_player_model(DESIRED_CHARACTER);
     }
 
-    // Cualquier respawn real (tras desangrarse sin revivir) ocurre al
-    // empezar la ronda siguiente. Una revivida a mitad de ronda NO crea
-    // una entidad nueva ni resetea el modelo, asi que no hace falta
-    // escuchar nada para ese caso.
-    for(;;)
+    while(true)
     {
         level waittill("start_of_round");
 
@@ -419,22 +400,6 @@ reapply_character_on_spawn()
     }
 }
 
-// FIX (no recuerda el personaje al empezar la partida): abre el menu
-// invisible "XoiaSync" (ver optionsxoia.lua) nada mas terminar de cargar
-// el jugador, replicando exactamente lo que hace el mod de referencia con
-// "StratTesterPerkSync". Ese menu lee el dvar de perfil PERSISTIDO
-// ("seta") del cliente y lo reenvia por SendMenuResponse, lo que hace que
-// change_player_model() se ejecute automaticamente con el ultimo personaje
-// que el jugador eligio, sin que tenga que abrir el menu a mano.
-//
-// AVISO SIN VERIFICAR: "self openmenu(...)" para forzar la apertura de un
-// menu Lua desde GSC es una tecnica estandar en mods de zombies de T6,
-// pero no he podido compilar/probar esto en tu entorno de Plutonium. Si al
-// probarlo el menu invisible no llega a abrirse, dimelo: en optionsstrattester.lua
-// no encontre el punto exacto donde se abre "StratTesterPerkSync" (no esta
-// en los 3 archivos que me pasaste), asi que puede que tu base use un gancho
-// distinto (por ejemplo, algo en un options.lua propio de Strat Tester) que
-// tendria que revisar para replicarlo con precision.
 xoia_sync_start()
 {
     level endon("end_game");
@@ -1085,8 +1050,8 @@ processCommand(command, player, twitch)
     }
     switch(command[0])
     {
-        case "!zc": case "zombiecount": print_zombies_at_round(command[1], twitch); break;
-        case "!tzc": case "totalzombiecount": total_zombie_count(command[1], command[2], twitch); break;
+        case "!zc": case "!zombiecount": print_zombies_at_round(command[1], twitch); break;
+        case "!tzc": case "!totalzombiecount": total_zombie_count(command[1], command[2], twitch); break;
         case "!dg": print_drops_grabbed(command[1], twitch); break;
         case "!bh": case "!boxhits": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
 
@@ -1701,22 +1666,22 @@ special_rounds(type, twitch)
 helpcase()
 {
     i = 0;
-    while (i < level.commands.size)
+    while (i < level.chatcommands.size)
     {
         text = "";
-        for (j = 0; j < 12; j++)
+        for (j = 0; j < 10; j++)
         {
-            if (!isdefined(level.commands[i + j]))
+            if (!isdefined(level.chatcommands[i + j]))
                 break;
 
             if (j > 0)
                 text += " ";
 
-            text += level.commands[i + j];
+            text += level.chatcommands[i + j];
         }
 
         globalprint(text);
-        i += 12;
+        i += 10;
         wait 0.1;
     }
 }
@@ -1904,15 +1869,6 @@ get_weapon_display(weapon)
     }
     return maps\mp\zombies\_zm_weapons::get_weapon_display_name(weapon);
 }
-
-// basic_verifier(code)
-// {
-//     if(!isdefined(level.zombie_weapons[code]))
-//         return WEAPON_NOT_PRESENT;
-//
-//     if(!level.zombie_weapons[code].is_in_box)
-//         return WEAPON_NOT_IN_BOX;
-// }
 
 boxcase(location)
 {

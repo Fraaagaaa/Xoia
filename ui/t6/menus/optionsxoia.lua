@@ -70,33 +70,6 @@ CoD.Xoia.OnToggleChanged = function ( choice, isUserRequest )
     end
 end
 
-
--- FIX v2 (correccion sobre la iteracion anterior): mi primer intento
--- evitaba dvars por completo y guardaba la seleccion en una tabla Lua en
--- memoria. Eso resolvia la fuga entre jugadores, pero rompia la
--- persistencia: una tabla Lua en memoria se pierde en cuanto se cierra la
--- partida (no sobrevive a un reinicio del juego), que es justo el segundo
--- problema reportado ("no recuerda que personaje escogio en la partida
--- anterior").
---
--- Mirando optionsstrattester.lua del mod de referencia, el patron correcto
--- SI usa un dvar, pero de un tipo distinto al que causaba el problema
--- original: un dvar de PERFIL DE CLIENTE, grabado a disco con el comando
--- de consola "seta" (ver CoD.StratTester.SetPerkDvarPersistent). Este dvar:
---   - vive SOLO en el perfil local de cada cliente (se guarda en su config,
---     sobrevive a cerrar el juego) -> soluciona "no recuerda personaje".
---   - GSC nunca lo lee directamente (a diferencia de "papcamo"/"timer",
---     que Xoia.gsc fija con setDvar() de SERVIDOR y por eso son globales).
---     El indice sigue viajando solo como argumento de SendMenuResponse,
---     recibido por el servidor siempre asociado a "self" -> sigue sin
---     haber fuga entre jugadores en cooperativo.
--- Para que el GSC se entere del valor persistido nada mas empezar la
--- partida (sin que el jugador tenga que abrir el menu), replicamos tambien
--- el mecanismo de "sync": CoD.Xoia.sync_character_menu() lee el dvar
--- persistido y lo reenvia por SendMenuResponse, y un menu invisible
--- (LUI.createMenu.XoiaSync, mas abajo) lo dispara varias veces nada mas
--- conectar, igual que hace LUI.createMenu.StratTesterPerkSync en el mod de
--- referencia.
 CoD.Xoia.SetDvarPersistent = function ( controller, dvarName, value )
     Engine.SetDvar( dvarName, value )
 
@@ -120,11 +93,6 @@ CoD.Xoia.OnCharacterChanged = function ( choice, isUserRequest )
     Engine.SendMenuResponse( controller, "restartgamepopup", "xoia+character+set+" .. tostring(choice.value) )
 end
 
--- FIX v3: ya no hay 4 dvars por tipo de mapa, solo uno ("xoia_character"),
--- porque change_player_model() ahora es un unico switch plano con los 15
--- personajes. Ya no hace falta mirar el mapa para decidir que dvar leer.
--- Si el jugador nunca eligio personaje (dvar vacio), no se manda nada: no
--- queremos forzar un personaje que el jugador jamas pidio.
 CoD.Xoia.sync_character_menu = function ( controller )
     if UIExpression.DvarString( nil, "xoia_character" ) == "" then return end
 
@@ -165,17 +133,64 @@ CoD.Xoia.send_response = function ( controller, module, action, args )
     Engine.SendMenuResponse( controller, "restartgamepopup", payload )
 end
 
--- PESTAÑA 1: MAPA
--- Pestaña vacía a propósito (placeholder para contenido futuro).
-CoD.Xoia.CreateMapTab = function ( Tab, LocalClientIndex )
+CoD.Xoia.SendMonitorCommand = function ( controller, command )
+    CoD.Xoia.send_response( controller, "game_monitor", "set", { command } )
+end
+
+CoD.Xoia.BuildMonitorCommands = function ()
+    if isOrigins then
+        CoD.Xoia.MonitorCommands = {
+            { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
+            { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
+            { label = "XOIA_MENU_MONITOR_FROZEN", command = "frozen" },
+            { label = "XOIA_MENU_MONITOR_NEXTTEMPLARS", command = "nexttemplars" },
+            { label = "XOIA_MENU_MONITOR_TEMPLARS", command = "templars" },
+            { label = "XOIA_MENU_MONITOR_NEXTPANZER", command = "nextpanzer" },
+            { label = "XOIA_MENU_MONITOR_PANZERS", command = "panzers" },
+            { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+        }
+    elseif isDieRise then
+        CoD.Xoia.MonitorCommands = {
+            { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
+            { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
+            { label = "XOIA_MENU_MONITOR_NEXTLEAPERS", command = "nextleapers" },
+            { label = "XOIA_MENU_MONITOR_LEAPERS", command = "leapers" },
+            { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+        }
+    elseif isMob then
+        CoD.Xoia.MonitorCommands = {
+            { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
+            { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
+            { label = "XOIA_MENU_MONITOR_NEXTBRUTUS", command = "nextbrutus" },
+            { label = "XOIA_MENU_MONITOR_BRUTUS", command = "brutus" },
+            { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+        }
+    else
+        CoD.Xoia.MonitorCommands = {
+            { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
+            { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
+        }
+    end
+end
+
+-- PESTAÑA 1: Monitor
+CoD.Xoia.CreateMonitorTab = function ( Tab, LocalClientIndex )
     CoD.Xoia.RefreshMapFlags()
+    CoD.Xoia.BuildMonitorCommands()
 	local Container = LUI.UIContainer.new()
 	local ButtonList = CoD.Options.CreateButtonList()
 
 	Tab.buttonList = ButtonList
 	Container:addElement( ButtonList )
 
-    -- Intencionadamente vacío.
+    for i, entry in ipairs( CoD.Xoia.MonitorCommands ) do
+        local Button = ButtonList:addButton( Engine.Localize( entry.label ) )
+        Button:setActionEventName( "xoia_monitor_cmd_" .. i )
+    end
 
     return Container
 end
@@ -237,18 +252,6 @@ CoD.Xoia.CreateConfigTab = function ( Tab, LocalClientIndex )
     --     end
     -- end
 
-    -- ================================================================
-    -- SELECTOR DE PERSONAJE
-    -- ----------------------------------------------------------------
-    -- FIX v3: change_player_model() ha cambiado de arquitectura. Ya NO usa
-    -- un switch distinto por tipo de mapa (isvictismap/issurvivalmap/
-    -- ismob/isorigins) — ahora es UN UNICO switch plano con los 15
-    -- personajes, numerados con los defines MISTY=1 .. RICHTOFEN=15 al
-    -- principio de Xoia.gsc. Por eso el selector deja de estar dividido en
-    -- 4 variantes segun el mapa: ahora es un unico selector con los 15
-    -- personajes, siempre visible, con esos mismos indices 1-15. El dvar
-    -- de perfil tambien pasa a ser uno solo ("xoia_character" en vez de
-    -- los 4 anteriores "_victis"/"_survival"/"_mob"/"_origins").
     local CharacterChoice = ButtonList:addHardwareProfileLeftRightSelector( Engine.Localize("XOIA_MENU_HUD_CHARACTER_POSITION"), "xoia_character", Engine.Localize("XOIA_MENU_HUD_CHARACTER_POSITION_DESC") )
 
     local characterEntries = {
@@ -282,32 +285,8 @@ CoD.Xoia.CreateConfigTab = function ( Tab, LocalClientIndex )
     end
     CharacterChoice:setChoice( currentCharacterVal )
 
-    -- ================================================================
-    -- SELECTOR DE CAMO DE PACK-A-PUNCH
-    -- ----------------------------------------------------------------
-    -- FIX: "is Origins" (con espacio) es un error de sintaxis en Lua que
-    -- probablemente impedia cargar el archivo entero. Ademas este selector
-    -- reutilizaba por copy-paste el dvar "mob_key" (colision con el
-    -- selector de personaje) y OnDvarChanged, cuyos valores (0-7) no
-    -- coincidian con los que realmente lee Xoia.gsc::camo() (dvar
-    -- "papcamo", valores 1 y CAMO_* = 39-45).
-    --
-    -- ATENCION - MISMO RIESGO QUE EL PERSONAJE, SIN RESOLVER TODAVIA:
-    -- Xoia.gsc::camo() fija el camo con setDvar("papcamo", ...) SIN "self"
-    -- delante, es decir, es un dvar de SERVIDOR compartido por toda la
-    -- partida (igual que "timer", "forcepap", "traptimer", "boxhits"...),
-    -- no uno por jugador. Por eso el comando de chat "!papcamo" cambia el
-    -- camo para todos los jugadores a la vez. He dejado el selector tal
-    -- cual (fijando el dvar "papcamo" directamente desde el cliente, como
-    -- ya hacia el codigo original) porque no se si esto es un bug o un
-    -- diseño intencional (un cosmetico global de testing, no un skin por
-    -- jugador). Si quieres que el camo tambien sea independiente por
-    -- jugador, dimelo: habria que cambiar camo() en Xoia.gsc para que
-    -- aplique el camo a "self" en vez de a un dvar global (revisando antes
-    -- si el motor de T6 realmente soporta aplicar PaP camo por jugador o si
-    -- es una limitacion del sistema de camo en si).
     if isMob or isBuried or isOrigins then
-        local CamoChoice = ButtonList:addHardwareProfileLeftRightSelector(Engine.Localize("XOIA_MENU_COSMETIC_CAMO_GREEN_RUN"), "papcamo", Engine.Localize("XOIA_MENU_HUD_CHARACTER_POSITION_DESC"))
+        local CamoChoice = ButtonList:addHardwareProfileLeftRightSelector(Engine.Localize("XOIA_MENU_COSMETIC_CAMO"), "papcamo", Engine.Localize("XOIA_MENU_COSMETIC_CAMO_DESC"))
         CamoChoice:addChoice(Engine.Localize("XOIA_MENU_COSMETIC_CAMO_NOCAMO"), 1, nil, CoD.Xoia.OnDvarChanged )
         CamoChoice:addChoice(Engine.Localize("XOIA_MENU_COSMETIC_CAMO_GREEN_RUN"), 39, nil, CoD.Xoia.OnDvarChanged )
         CamoChoice:addChoice(Engine.Localize("XOIA_MENU_COSMETIC_CAMO_MOB"), 40, nil, CoD.Xoia.OnDvarChanged )
@@ -433,22 +412,6 @@ CoD.Xoia.CreateInfoTab = function ( Tab, LocalClientIndex )
     return Container
 end
 
--- FIX ("PAUSED AT ROUND", visto en options.lua base del juego,
--- LUI.createMenu.OptionsMenu): texto informativo que muestra en que ronda
--- se pauso la partida. Lo saco a una funcion aparte para poder añadirlo a
--- cualquier menu de este mod (de momento solo XoiaMenu, pero si en el
--- futuro se añaden mas menus visibles se reutiliza igual).
---
--- FIX v2 (dvar equivocado + centrado):
--- 1) "ui_zm_round" no existe en este entorno (Plutonium/este mod nunca lo
---    define). El dvar que SI existe y se actualiza en tiempo real es
---    "xoia_info_round", que Xoia_ui.gsc::update_info_dvars() fija cada
---    segundo con setdvar("xoia_info_round", level.round_number) — el mismo
---    dvar que ya usa el tab de INFO (addInfo("Ronda Actual", "xoia_info_round")).
--- 2) Centrado: antes el texto estaba anclado a la derecha (-300,-50,
---    alignment Right), igual que en el options.lua original (que lo pone
---    en la esquina, al lado del boton de sistema). Aqui lo centramos: todo
---    el ancho del menu, alineacion Center.
 CoD.Xoia.AddPausedAtRoundText = function ( menu, LocalClientIndex )
     if UIExpression.IsInGame( LocalClientIndex ) ~= 1 then return end
 
@@ -470,12 +433,6 @@ end
 LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     local menu = CoD.Menu.New("XoiaMenu")
 
-    -- FIX (pedido por el usuario): "XOIA" es accesible tanto en pausa
-    -- (options.lua, rama in-game) como desde el menu principal (misma
-    -- funcion, rama no in-game) — asi que el titulo debe alinearse segun
-    -- el contexto en el que se abra, no siempre igual. En pausa, a la
-    -- izquierda (igual que el resto de menus, donde lo hace
-    -- CoD.InGameMenu.New automaticamente); en el menu principal, centrado.
     local isInGame = UIExpression.IsInGame( LocalClientIndex ) == 1
 
     if isInGame then
@@ -487,16 +444,37 @@ LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     menu:addBackButton()
     menu:registerEventHandler("button_prompt_back", CoD.Xoia.Back )
     menu:registerEventHandler("tab_changed", CoD.Xoia.TabChanged )
+
+    -- Hace falta reconstruir CoD.Xoia.MonitorCommands aqui tambien (no
+    -- solo dentro de CreateMonitorTab): este bucle de abajo registra los
+    -- eventos usando esa misma tabla, y las pestañas se cargan de forma
+    -- perezosa (solo se construyen cuando se ven), asi que si no se
+    -- reconstruye aqui, este bucle se ejecutaria con la lista del mapa
+    -- anterior (o vacia la primera vez).
+    CoD.Xoia.RefreshMapFlags()
+    CoD.Xoia.BuildMonitorCommands()
+
+    -- Un handler por comando, generado a partir de CoD.Xoia.MonitorCommands
+    -- (misma tabla que usa CreateMonitorTab para crear los botones, mismo
+    -- nombre de evento "xoia_monitor_cmd_i"). Anadir un comando nuevo a esa
+    -- tabla es lo unico que hace falta; este bucle y los botones se generan
+    -- solos.
+    for i, entry in ipairs( CoD.Xoia.MonitorCommands ) do
+        local command = entry.command
+        menu:registerEventHandler( "xoia_monitor_cmd_" .. i, function( element, event )
+            CoD.Xoia.SendMonitorCommand( event.controller, command )
+        end )
+    end
     menu:setAlpha(1)
 
     CoD.Xoia.AddPausedAtRoundText( menu, LocalClientIndex )
 
     local SettingsTabs = CoD.Options.SetupTabManager( menu, 500 )
 
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_config"), CoD.Xoia.CreateConfigTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_map"), CoD.Xoia.CreateMapTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_trackers"), CoD.Xoia.CreateTrackersTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("xoia_menu_tab_info"), CoD.Xoia.CreateInfoTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_CONFIG"), CoD.Xoia.CreateConfigTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_MAP"), CoD.Xoia.CreateMonitorTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_TRACKERS"), CoD.Xoia.CreateTrackersTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_INFO"), CoD.Xoia.CreateInfoTab)
 
     local maxTabs = 4
 
@@ -539,16 +517,6 @@ CoD.Xoia.sync_hud_menu = function (controller)
     CoD.Xoia.send_response( controller, "hud", "sync", args )
 end
 
--- FIX (persistencia al empezar la partida): en el mod de referencia,
--- LUI.createMenu.StratTesterPerkSync es un menu invisible (alpha 0) que se
--- crea nada mas conectar y dispara CoD.StratTester.sync_perk_menu /
--- sync_hud_menu varias veces seguidas (una "pulsacion" cada 100ms, 5 veces)
--- antes de cerrarse solo. Repetirlo varias veces es defensivo: si la
--- primera llamada llega antes de que el jugador este completamente
--- inicializado en el servidor, las siguientes lo cubren. CoD.Xoia.sync_hud_menu
--- ya existia en este archivo pero nunca se llamaba desde ningun sitio: por
--- eso el personaje (y el resto de ajustes de HUD) no se recuperaban al
--- empezar la partida. Replicamos el mismo mecanismo aqui para el personaje.
 CoD.Xoia.SyncPulse = function ( menu, event )
     if menu.syncCount == nil then
         menu.syncCount = 0
@@ -578,6 +546,3 @@ LUI.createMenu.XoiaSync = function ( LocalClientIndex )
 
     return menu
 end
-    --   cg_drawChecksums "0"
-    --   cg_drawDisconnect "1"
-    --   cg_drawVelocity "0" Velocity
