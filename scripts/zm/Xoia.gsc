@@ -1,10 +1,11 @@
 #include common_scripts\utility;
-#include maps\mp\gametypes_zm\_hud_util;
-#include maps\mp\zombies\_zm_utility;
 #include maps\mp\_utility;
+#include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\zombies\_clientfield;
+#include maps\mp\zombies\_zm;
+#include maps\mp\zombies\_zm_utility;
 
-#define DEBUG 1
+#define DEBUG 0
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
@@ -13,7 +14,19 @@
 
 #define STAT_CHAR_MAP "zm_highrise"
 #define STAT_CHAR "clip"
+
+#define STAT_SPEED_MAP "zm_tomb"
+#define STAT_SPEED "clip"
+
+#define STAT_KEY_MAP "zm_prison"
+#define STAT_KEY "clip"
+
+#define SPEED_FIX 0
+#define SPEED_STEAM 1
+
 #define DESIRED_CHARACTER self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_CHAR, STAT_CHAR_MAP)
+#define DESIRED_SPEED gethostplayer() maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_SPEED, STAT_SPEED_MAP)
+#define DESIRED_KEY gethostplayer() maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_KEY, STAT_KEY_MAP)
 
 #define CLEAR_WATERMARK_ROUND 10
 #define MAX_FB_ROUND 7
@@ -49,9 +62,6 @@
 #define NIKOLAI 13
 #define TAKEO 14
 #define RICHTOFEN 15
-
-#define STAT_KEY_MAP "zm_prison"
-#define STAT_KEY "clip"
 
 #define WEAPON_NOT_PRESENT "weapon_not_in_map"
 #define WEAPON_NOT_IN_BOX "weapon_not_in_box"
@@ -181,6 +191,8 @@ init()
     flag_wait("initial_blackscreen_passed");
 
 	replaceFunc(getfunction("maps/mp/zombies/_zm_magicbox", "treasure_chest_weapon_spawn"), ::treasure_chest_weapon_spawn);
+	replaceFunc(getfunction("maps/mp/zombies/_zm", "round_think"), ::round_think);
+    bscase(true);
 }
 
 connected()
@@ -197,6 +209,7 @@ connected()
 		player thread spawned();
 		player thread reapply_character_on_spawn();
 		player thread xoia_sync_start();
+		player thread monitorDowns();
 		if(isvictismap())
 		{
 			player thread bank();
@@ -239,9 +252,6 @@ disconnect()
 
 spawned()
 {
-	self endon("disconnect");
-	self waittill("spawned_player");
-
     if(!isdefined(self.timer))
     {
         self thread timer();
@@ -311,65 +321,80 @@ change_player_model(desired_character)
             self setmodel( "c_zom_player_farmgirl_dlc1_fb" );
             self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
             self setviewmodel( "c_zom_farmgirl_viewhands" );
+            self.character_name = "Misty";
             break;
         case RUSSMAN:
             self setmodel( "c_zom_player_oldman_dlc1_fb" );
             self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
             self setviewmodel( "c_zom_oldman_viewhands" );
+            self.character_name = "Russman";
             break;
         case MARLTON:
             self setmodel( "c_zom_player_reporter_dlc1_fb" );
             self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
             self setviewmodel( "c_zom_reporter_viewhands" );
+            self.character_name = "Marlton";
             break;
         case STUHLINGER:
             self setmodel( "c_zom_player_engineer_dlc1_fb" );
             self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
             self setviewmodel( "c_zom_engineer_viewhands" );
+            self.character_name = "Stuhlinger";
             break;
         case CDC:
-            self setmodel("c_zom_player_cdc_fb");
-            self setviewmodel("c_zom_suit_viewhands");
+            self setmodel("c_zom_player_cdc_fb"); // está bien
+            self setviewmodel("c_zom_hazmat_viewhands_light");
+            self.character_name = "CDC";
             break;
         case CIA:
-            self setmodel("c_zom_player_cdc_fb");
-            self setviewmodel("c_zom_suit_viewhands");
+            self setmodel("c_zom_player_cia_fb");
+            self setviewmodel("c_zom_suit_viewhands"); // está bien
+            self.character_name = "CIA";
             break;
         case OLEARY:
             self setmodel( "c_zom_player_oleary_fb" );
             self setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
+            self.character_name = "Oleary";
             break;
         case DELUCA:
             self setmodel( "c_zom_player_deluca_fb" );
             self setviewmodel( "c_zom_deluca_longsleeve_viewhands" );
+            self.character_name = "Deluca";
             break;
         case HANDSOME:
             self setmodel( "c_zom_player_handsome_fb" );
             self setviewmodel( "c_zom_handsome_sleeveless_viewhands" );
+            self.character_name = "Handsome";
             break;
         case ARLINGTON:
             self setmodel( "c_zom_player_arlington_fb" );
             self setviewmodel( "c_zom_arlington_coat_viewhands" );
+            self.character_name = "Arlington";
             break;
         case AFTERLIFE:
             self setmodel( "c_zom_player_handsome_fb" );
             self setviewmodel( "c_zom_ghost_viewhands" );
+            self.character_name = "Ghost";
             break;
         case DEMPSEY:
             self setmodel( "c_zom_tomb_dempsey_fb" );
             self setviewmodel( "c_zom_dempsey_viewhands" );
+            self.character_name = "Dempsey";
             break;
         case NIKOLAI:
             self setmodel( "c_zom_tomb_nikolai_fb" );
             self setviewmodel( "c_zom_nikolai_viewhands" );
+            self.character_name = "Nikolai";
             break;
         case TAKEO:
             self setmodel( "c_zom_tomb_takeo_fb" );
             self setviewmodel( "c_zom_takeo_viewhands" );
+            self.character_name = "Takeo";
             break;
         case RICHTOFEN:
             self setmodel( "c_zom_tomb_richtofen_fb" );
             self setviewmodel( "c_zom_richtofen_viewhands" );
+            self.character_name = "Richtofen";
             break;
     }
 }
@@ -869,6 +894,7 @@ init_monitor()
     level thread readconsole();
     level thread drops_grabbed();
     level thread monitor_round_loop();
+
     replacefunc(getfunction("maps/mp/zombies/_zm_powerups", "powerup_grab"), ::powerup_grab);
 
     flag_wait("initial_blackscreen_passed");
@@ -931,27 +957,10 @@ readchat()
         level.chatcommands = [];
     if(!isdefined(level.chatcommandsaliases))
         level.chatcommandsaliases = [];
-    // Hacer un tab con info:
-    // Zombis esta ronda
-    // Boxhits
-    // NextSpecialRound
-    // Ronda actual
-    // Downs
-    // Si se ha usado firstbox
-    // SPH actual, Mejor SPH, SPH de la última ronda
-
-    // Hacer un tab para mariconadas
-    // cambiar de personaje
-    // cambiar el camo
-    // cambiar el timer
-    // Activar el timer de trampa
-    // Cambiar el backspeed
-    // Forzar el pap en nuketown
-    // Cambiar la llave en mob
 
     // Hacer un tab con los tiempos de la partida
     // misc
-    addCommands(array("help", "dg", "backspeed", "boxhits", "boxtracker"), false);
+    addCommands(array("help", "dg", "backspeed", "boxhits", "boxtracker", "downs"), false);
     addCommands(array("bs", "bh", "bt"), true);
 
     // Timers
@@ -969,7 +978,7 @@ readchat()
 
     // Set-up
     addCommands(array("fridge", "key", "forcepap", "firstbox", "box"), false);
-    addCommands(array("f", "fb"), true);
+    addCommands(array("f", "fb", "keymonitor"), true);
 
     // Cosmetic
     addCommands(array("character", "papcamo"), false);
@@ -1028,6 +1037,8 @@ processCommand(command, player, twitch)
         {
             case "!help": helpcase(); break;
 
+            case "!downs": downscase(player, twitch); break;
+
             case "!firstbox": case "!fb": fbcase(command); break;
             case "!box": boxcase(command[1]); break;
             case "!bt": case "!boxtracker": setDvar("boxhits", !getDvarInt("boxhits")); break;
@@ -1042,6 +1053,8 @@ processCommand(command, player, twitch)
             case "!fridge": case "!f": player fridgecase(command[1]); break;
 
             case "!key": keycase(command[1]); break;
+
+            case "!keymonitor": keycase("monitor"); break;
 
             case "!bs": case "!backspeed": bscase(); break;
 
@@ -1088,6 +1101,23 @@ frozenrounds(twitch)
 
 keycase(loc)
 {
+    if(loc == "monitor")
+    {
+        gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_KEY, (DESIRED_KEY + 1) % 3, STAT_KEY_MAP);
+        switch(DESIRED_KEY)
+        {
+            case 1:
+                globalprint("Key override set to cafeteria, please restart the match");
+            break;
+            case 2:
+                globalprint("Key override set to warden's office, please restart the match");
+            break;
+            case 0:
+                globalprint("Key override has been reseted, please restart the match");
+            break;
+        }
+        return;
+    }
     if(IsSubStr(loc, "cafe") || IsSubStr(loc, "west"))
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_KEY, 1, STAT_KEY_MAP);
@@ -1180,19 +1210,26 @@ timercase(pos)
         globalprint("Unkown position, please use 1, 2, 3, 4 or 0 to hide the timer");
 }
 
-bscase()
+bscase(set)
 {
-    if(getDvarInt("player_strafeSpeedScale") != 1) //	Console
+    if(!isdefined(set))
+    {
+        gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_SPEED, !DESIRED_SPEED, STAT_SPEED_MAP);
+    }
+
+    if(DESIRED_SPEED == SPEED_STEAM)
+    {
+        setdvar("player_strafeSpeedScale", 0.8 );
+        setdvar("player_backSpeedScale", 0.7 );
+        if(!isdefined(set))
+            globalprint("Changed player speed to match steam");
+    }
+    else if (DESIRED_SPEED == SPEED_FIX)
     {
         setdvar("player_strafeSpeedScale", 1 );
         setdvar("player_backSpeedScale", 1 );
-        globalprint("Changed player speed to match console");
-    }
-    else // Steam
-    {
-        setdvar("player_strafeSpeedScale", 0.9 );
-        setdvar("player_backSpeedScale", 0.7 );
-        globalprint("Changed player speed to match steam");
+        if(!isdefined(set))
+            globalprint("Changed player speed to match console");
     }
 }
 
@@ -1374,6 +1411,7 @@ monitor_round_loop()
 
         while(true)
         {
+            setDvar("xoia_info_round", level.round_number);
             level waittill("start_of_round");
             level.round_start_time = gettime();
             level.round_total_time[level.round_total_time.size] = (level.round_start_time / 1000 - level.game_start_time);
@@ -1388,6 +1426,7 @@ monitor_round_loop()
 
     while(true)
     {
+        setDvar("xoia_info_round", level.round_number);
         level waittill("start_of_round");
         level.round_start_time = gettime();
         level.round_total_time[level.round_total_time.size] = (level.round_start_time / 1000 - level.game_start_time);
@@ -2605,7 +2644,6 @@ init_hud()
         level.total_chest_accessed = 0;
 
     level thread displayBoxHits();
-    level thread roundcounter();
 
     if(ismob())
         level thread traptimer();
@@ -2617,33 +2655,6 @@ init_hud()
         level thread raygunDisplay();
 
     level thread setHUDLanguage();
-}
-
-roundcounter()
-{
-    level endon("end_game");
-
-    round = 0;
-    level.roundcounter = createserverfontstring( "objective", 10 );
-    level.roundcounter.hidewheninmenu = true;
-    level.roundcounter.y = -5;
-    level.roundcounter.x = 70;
-    level.roundcounter.alignx = "left";
-    level.roundcounter.horzalign = "user_left";
-    level.roundcounter.vertalign = "user_bottom";
-    level.roundcounter.aligny = "bottom";
-    level.roundcounter.alpha = 0;
-    level.roundcounter.color = (0.27, 0, 0);
-    if(getDvar("language") == "japanese")
-        level.roundcounter.x = 130;
-    while(true)
-    {
-        level waittill("start_of_round");
-        round++;
-        level.roundcounter setvalue(round);
-        if(round > 255)
-            level.roundcounter.alpha = 1;
-    }
 }
 
 buildable_hud()
@@ -3262,5 +3273,182 @@ powerup_grab( powerup_team )
             }
         }
         wait 0.1;
+    }
+}
+
+downscase(who, twitch)
+{
+    if(!isdefined(who.monitor_downs) || who.monitor_downs.size == 0)
+    {
+        globalprint("No downs registered.", twitch);
+        return;
+    }
+
+    globalprint("Downs by " + who.name, twitch);
+    for(i = 0; i < who.monitor_downs.size; i++)
+    {
+        globalprint("Round " + who.monitor_downs[i].round_number + ": " + who.monitor_downs[i].amount, twitch);
+        if(i % 3 == 0 && i > 2)
+            wait 2;
+    }
+}
+
+monitorDowns()
+{
+    level endon("end_game");
+    self endon("disconnect");
+
+    self.monitor_downs = [];
+
+    while(true)
+    {
+        self waittill("player_downed");
+        if(self.monitor_downs.size > 0 && self.monitor_downs[self.monitor_downs.size - 1].round_number == level.round_number)
+        {
+            self.monitor_downs[self.monitor_downs.size - 1].amount++;
+        }
+        else
+        {
+            index = self.monitor_downs.size;
+            self.monitor_downs[index] = spawnstruct();
+            self.monitor_downs[index].round_number = level.round_number;
+            self.monitor_downs[index].amount = 1;
+        }
+    }
+}
+
+round_think( restart )
+{
+    if ( !isdefined( restart ) )
+        restart = 0;
+
+    level endon( "end_round_think" );
+
+    if ( !( isdefined( restart ) && restart ) )
+    {
+        if ( isdefined( level.initial_round_wait_func ) )
+            [[ level.initial_round_wait_func ]]();
+
+        if ( !( isdefined( level.host_ended_game ) && level.host_ended_game ) )
+        {
+            players = get_players();
+
+            foreach ( player in players )
+            {
+                if ( !( isdefined( player.hostmigrationcontrolsfrozen ) && player.hostmigrationcontrolsfrozen ) )
+                {
+                    player freezecontrols( 0 );
+                }
+
+                player maps\mp\zombies\_zm_stats::set_global_stat( "rounds", level.round_number );
+            }
+        }
+    }
+
+    setroundsplayed( level.round_number );
+
+    for (;;)
+    {
+        maxreward = 50 * level.round_number;
+
+        if ( maxreward > 500 )
+            maxreward = 500;
+
+        level.zombie_vars["rebuild_barrier_cap_per_round"] = maxreward;
+        level.pro_tips_start_time = gettime();
+        level.zombie_last_run_time = gettime();
+
+        if ( isdefined( level.zombie_round_change_custom ) )
+            [[ level.zombie_round_change_custom ]]();
+        else
+        {
+            level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_start" );
+            round_one_up();
+        }
+
+        maps\mp\zombies\_zm_powerups::powerup_round_start();
+        players = get_players();
+        array_thread( players, maps\mp\zombies\_zm_blockers::rebuild_barrier_reward_reset );
+
+        if ( !( isdefined( level.headshots_only ) && level.headshots_only ) && !restart )
+            level thread award_grenades_for_survivors();
+
+        bbprint( "zombie_rounds", "round %d player_count %d", level.round_number, players.size );
+        level.round_start_time = gettime();
+
+        while ( level.zombie_spawn_locations.size <= 0 )
+            wait 0.1;
+
+        level thread [[ level.round_spawn_func ]]();
+        level notify( "start_of_round" );
+        recordzombieroundstart();
+        players = getplayers();
+
+        for ( index = 0; index < players.size; index++ )
+        {
+            zonename = players[index] get_current_zone();
+
+            if ( isdefined( zonename ) )
+                players[index] recordzombiezone( "startingZone", zonename );
+        }
+
+        if ( isdefined( level.round_start_custom_func ) )
+            [[ level.round_start_custom_func ]]();
+
+        [[ level.round_wait_func ]]();
+        level.first_round = 0;
+        level notify( "end_of_round" );
+        level thread maps\mp\zombies\_zm_audio::change_zombie_music( "round_end" );
+        uploadstats();
+
+        if ( isdefined( level.round_end_custom_logic ) )
+            [[ level.round_end_custom_logic ]]();
+
+        players = get_players();
+
+        if ( isdefined( level.no_end_game_check ) && level.no_end_game_check )
+        {
+            level thread last_stand_revive();
+            level thread spectators_respawn();
+        }
+        else if ( 1 != players.size )
+            level thread spectators_respawn();
+
+        players = get_players();
+        array_thread( players, maps\mp\zombies\_zm_pers_upgrades_system::round_end );
+        timer = level.zombie_vars["zombie_spawn_delay"];
+
+        if ( timer > 0.08 )
+            level.zombie_vars["zombie_spawn_delay"] = timer * 0.95;
+        else if ( timer < 0.08 )
+            level.zombie_vars["zombie_spawn_delay"] = 0.08;
+
+        if ( level.gamedifficulty == 0 )
+            level.zombie_move_speed = level.round_number * level.zombie_vars["zombie_move_speed_multiplier_easy"];
+        else
+            level.zombie_move_speed = level.round_number * level.zombie_vars["zombie_move_speed_multiplier"];
+
+        level.round_number++;
+
+        // if ( 255 < level.round_number )
+        //     level.round_number = 255;
+
+        setroundsplayed( level.round_number );
+        matchutctime = getutc();
+        players = get_players();
+
+        foreach ( player in players )
+        {
+            if ( level.curr_gametype_affects_rank && level.round_number > 3 + level.start_round )
+                player maps\mp\zombies\_zm_stats::add_client_stat( "weighted_rounds_played", level.round_number );
+
+            player maps\mp\zombies\_zm_stats::set_global_stat( "rounds", level.round_number );
+            player maps\mp\zombies\_zm_stats::update_playing_utc_time( matchutctime );
+        }
+
+        check_quickrevive_for_hotjoin();
+        level round_over();
+        level notify( "between_round_over" );
+        restart = 0;
     }
 }

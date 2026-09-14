@@ -2,40 +2,62 @@
 #include maps\mp\_utility;
 #include maps\mp\zombies\_zm_utility;
 
-#define DEBUG 1
+#define DEBUG 0
 
 init()
 {
-    level thread update_info_dvars();
     level thread init_menu_system();
+    level thread init_info_dvars();
     register_menu_handler( "character", ::on_character_menu );
     register_menu_handler( "game_monitor", ::on_game_monitor_menu);
 }
 
-update_info_dvars()
+init_info_dvars()
+{
+    self thread timeDvars();
+
+    flag_wait("initial_blackscreen_passed");
+    if(level.players.size == 1)
+        level.players[0] thread downDvars();
+}
+
+downDvars()
 {
     level endon("end_game");
-    
-    setdvar("xoia_info_zombies", "0");
-    setdvar("xoia_info_boxhits", "0");
-    setdvar("xoia_info_round", "0");
-    
+    self endon("disconnect");
+    setDvar("xoia_info_down1", "N/A");
+    setDvar("xoia_info_down2", "N/A");
+    setDvar("xoia_info_down3", "N/A");
+
+    self waittill("player_downed");
+    setDvar("xoia_info_down1", "" + level.round_number);
+    self waittill("player_downed");
+    setDvar("xoia_info_down2", "" + level.round_number);
+    self waittill("player_downed");
+    setDvar("xoia_info_down3", "" + level.round_number);
+}
+
+timeDvars()
+{
+    level endon ("end_game");
+
     while(true)
     {
-        if(isdefined(level.round_number))
-        {
-            zombies_total = scripts\zm\Xoia::zombies_at_round(level.round_number);
-            zombies_alive = get_current_zombie_count();
-            setdvar("xoia_info_zombies", zombies_alive + " / " + zombies_total);
-            setdvar("xoia_info_round", level.round_number);
-        }
-        
-        if(isdefined(level.total_chexoia_accessed))
-        {
-            setdvar("xoia_info_boxhits", level.total_chexoia_accessed);
-        }
-        
-        wait 1;
+        level waittill("start_of_round");
+        if(isdefined(level.round_total_time[29]))
+            setDvar("timeto30", int_to_time(level.round_total_time[29]));
+        if(isdefined(level.round_total_time[49]))
+            setDvar("timeto50", int_to_time(level.round_total_time[49]));
+        if(isdefined(level.round_total_time[69]))
+            setDvar("timeto70", int_to_time(level.round_total_time[69]));
+        if(isdefined(level.round_total_time[99]))
+            setDvar("timeto100", int_to_time(level.round_total_time[99]));
+        if(isdefined(level.round_total_time[149]))
+            setDvar("timeto150", int_to_time(level.round_total_time[149]));
+        if(isdefined(level.round_total_time[199]))
+            setDvar("timeto200", int_to_time(level.round_total_time[199]));
+        if(isdefined(level.round_total_time[254]))
+            setDvar("timeto255", int_to_time(level.round_total_time[254]));
     }
 }
 
@@ -47,7 +69,7 @@ init_menu_system()
     foreach ( player in getplayers() )
         player thread menu_dispatcher();
 
-    while ( true )
+    while (true)
     {
         level waittill( "connected", player );
         player thread menu_dispatcher();
@@ -73,13 +95,13 @@ menu_dispatcher()
 
         if (!isdefined(menu) || !isdefined(response) || menu != "restartgamepopup")
         {
-            self IPrintLn("Not right menu");
+            if(DEBUG) PrintLn("Not right menu");
             continue;
         }
 
         if (!issubstr(response, "xoia+"))
         {
-            self IPrintLn("No right module");
+            if(DEBUG) PrintLn("No right module");
             continue;
         }
 

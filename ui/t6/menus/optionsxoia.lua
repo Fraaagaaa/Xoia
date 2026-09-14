@@ -7,6 +7,8 @@ CoD.Xoia.NeedVidRestart = false
 CoD.Xoia.NeedPicmip = false
 CoD.Xoia.NeedSndRestart = false
 
+CoD.Xoia.RoundTimes = {30, 50, 70, 100, 150, 200, 255}
+
 CoD.Xoia.RefreshMapFlags = function ()
     mapname = UIExpression.DvarString( nil, "mapname" )
 	gametype = UIExpression.DvarString( nil, "ui_gametype")
@@ -87,9 +89,6 @@ CoD.Xoia.OnCharacterChanged = function ( choice, isUserRequest )
 
     local dvarName = choice.parentSelectorButton.m_profileVarName
     CoD.Xoia.SetDvarPersistent( controller, dvarName, choice.value )
-
-    -- El indice viaja SIEMPRE como argumento del propio mensaje; el
-    -- servidor lo aplica a "self" (el jugador dueño de este controller).
     Engine.SendMenuResponse( controller, "restartgamepopup", "xoia+character+set+" .. tostring(choice.value) )
 end
 
@@ -141,6 +140,7 @@ CoD.Xoia.BuildMonitorCommands = function ()
     if isOrigins then
         CoD.Xoia.MonitorCommands = {
             { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_PRINT_TIMES", command = "times" },
             { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
             { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
             { label = "XOIA_MENU_MONITOR_FROZEN", command = "frozen" },
@@ -149,30 +149,38 @@ CoD.Xoia.BuildMonitorCommands = function ()
             { label = "XOIA_MENU_MONITOR_NEXTPANZER", command = "nextpanzer" },
             { label = "XOIA_MENU_MONITOR_PANZERS", command = "panzers" },
             { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+            { label = "XOIA_MENU_MONITOR_BACKSPEED", command = "backspeed" },
         }
     elseif isDieRise then
         CoD.Xoia.MonitorCommands = {
             { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_PRINT_TIMES", command = "times" },
             { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
             { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
             { label = "XOIA_MENU_MONITOR_NEXTLEAPERS", command = "nextleapers" },
             { label = "XOIA_MENU_MONITOR_LEAPERS", command = "leapers" },
             { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+            { label = "XOIA_MENU_MONITOR_BACKSPEED", command = "backspeed" },
         }
     elseif isMob then
         CoD.Xoia.MonitorCommands = {
             { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_NEXT_KEY", command = "keymonitor"},
+            { label = "XOIA_MENU_MONITOR_PRINT_TIMES", command = "times" },
             { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
             { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
             { label = "XOIA_MENU_MONITOR_NEXTBRUTUS", command = "nextbrutus" },
             { label = "XOIA_MENU_MONITOR_BRUTUS", command = "brutus" },
             { label = "XOIA_MENU_MONITOR_ROUNDERS", command = "rounders" },
+            { label = "XOIA_MENU_MONITOR_BACKSPEED", command = "backspeed" },
         }
     else
         CoD.Xoia.MonitorCommands = {
             { label = "XOIA_MENU_MONITOR_HELP", command = "help" },
+            { label = "XOIA_MENU_MONITOR_PRINT_TIMES", command = "times" },
             { label = "XOIA_MENU_MONITOR_ZOMBIECOUNT", command = "zombiecount" },
             { label = "XOIA_MENU_MONITOR_BOXHITS", command = "boxhits" },
+            { label = "XOIA_MENU_MONITOR_BACKSPEED", command = "backspeed" },
         }
     end
 end
@@ -219,18 +227,6 @@ CoD.Xoia.CreateConfigTab = function ( Tab, LocalClientIndex )
 
     TimerChoice:setChoice( currentTimerVal )
 
-    -- BACKSPEED
-    local BackSpeedChoice = ButtonList:addHardwareProfileLeftRightSelector(Engine.Localize("XOIA_MENU_BACKSPEED"), "backspeed", Engine.Localize("XOIA_MENU_BACKSPEED_DESC"))
-    BackSpeedChoice:addChoice(Engine.Localize("XOIA_MENU_BACKSPEED_FIXED"), 0, nil, CoD.Xoia.OnDvarChanged )
-    BackSpeedChoice:addChoice(Engine.Localize("XOIA_MENU_BACKSPEED_STEAM"), 1, nil, CoD.Xoia.OnDvarChanged )
-
-    local currentBS = UIExpression.DvarInt( nil, "backspeed")
-    if UIExpression.DvarString( nil, "backspeed") == "" then
-        currentBS = 1
-        Engine.SetDvar("backspeed", currentBS )
-    end
-    BackSpeedChoice:setChoice( currentBS )
-
     if isNuketown then
         local NukeChoice = ButtonList:addHardwareProfileLeftRightSelector(Engine.Localize("XOIA_MENU_COSMETICS_NUKETOWN_RESTART"), "forcepap", Engine.Localize("XOIA_MENU_COSMETICS_NUKETOWN_RESTART_DESC"))
         CoD.Xoia.AddChoices_OnOrOff(NukeChoice, 0)
@@ -276,9 +272,6 @@ CoD.Xoia.CreateConfigTab = function ( Tab, LocalClientIndex )
         CharacterChoice:addChoice( Engine.Localize( entry[1] ), entry[2], nil, CoD.Xoia.OnCharacterChanged )
     end
 
-    -- Solo LEER el dvar para mostrar la seleccion actual. A proposito NO
-    -- llamamos Engine.SetDvar aqui: el dvar se persiste unicamente cuando
-    -- el jugador cambia el selector de verdad (OnCharacterChanged).
     local currentCharacterVal = UIExpression.DvarInt( nil, "xoia_character" )
     if currentCharacterVal == nil or UIExpression.DvarString( nil, "xoia_character" ) == "" or currentCharacterVal < 1 or currentCharacterVal > #characterEntries then
         currentCharacterVal = characterEntries[1][2]
@@ -381,6 +374,7 @@ CoD.Xoia.CreateTrackersTab = function ( Tab, LocalClientIndex )
     return Container
 end
 
+
 -- PESTAÑA 4: INFO
 CoD.Xoia.CreateInfoTab = function ( Tab, LocalClientIndex )
     CoD.Xoia.RefreshMapFlags()
@@ -393,21 +387,22 @@ CoD.Xoia.CreateInfoTab = function ( Tab, LocalClientIndex )
         local val = UIExpression.DvarString(nil, dvar)
         if val == "" then val = "N/A" end
         local btn = ButtonList:addButton( title .. ": " .. val )
-        btn:disable() 
+    end
+    ButtonList:addButton( Engine.Localize("XOIA_MENU_INFO_ROUND_TIMES") )
+
+    for _, round in ipairs( CoD.Xoia.RoundTimes ) do
+        addInfo( tostring( round ), "timeto" .. tostring( round ) )
     end
 
-    addInfo("Ronda Actual", "xoia_info_round")
-    addInfo("Zombis (Vivos / Total)", "xoia_info_zombies")
-    addInfo("Tiradas de Caja", "xoia_info_boxhits")
+    local lobbyPlayers = Engine.GetPlayersInLobby()
+    local playerCount = lobbyPlayers and #lobbyPlayers or 1
 
-
-    -- Zombis esta ronda
-    -- Boxhits
-    -- NextSpecialRound
-    -- Ronda actual
-    -- Downs
-    -- Si se ha usado firstbox
-    -- SPH actual, Mejor SPH, SPH de la última ronda
+    if playerCount == 1 then
+        ButtonList:addButton( Engine.Localize("XOIA_MENU_INFO_DOWNS") )
+        addInfo( Engine.Localize("XOIA_MENU_INFO_DOWNS_LIST_1"), "xoia_info_down1" )
+        addInfo( Engine.Localize("XOIA_MENU_INFO_DOWNS_LIST_2"), "xoia_info_down2" )
+        addInfo( Engine.Localize("XOIA_MENU_INFO_DOWNS_LIST_3"), "xoia_info_down3" )
+    end
 
     return Container
 end
@@ -445,20 +440,9 @@ LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     menu:registerEventHandler("button_prompt_back", CoD.Xoia.Back )
     menu:registerEventHandler("tab_changed", CoD.Xoia.TabChanged )
 
-    -- Hace falta reconstruir CoD.Xoia.MonitorCommands aqui tambien (no
-    -- solo dentro de CreateMonitorTab): este bucle de abajo registra los
-    -- eventos usando esa misma tabla, y las pestañas se cargan de forma
-    -- perezosa (solo se construyen cuando se ven), asi que si no se
-    -- reconstruye aqui, este bucle se ejecutaria con la lista del mapa
-    -- anterior (o vacia la primera vez).
     CoD.Xoia.RefreshMapFlags()
     CoD.Xoia.BuildMonitorCommands()
 
-    -- Un handler por comando, generado a partir de CoD.Xoia.MonitorCommands
-    -- (misma tabla que usa CreateMonitorTab para crear los botones, mismo
-    -- nombre de evento "xoia_monitor_cmd_i"). Anadir un comando nuevo a esa
-    -- tabla es lo unico que hace falta; este bucle y los botones se generan
-    -- solos.
     for i, entry in ipairs( CoD.Xoia.MonitorCommands ) do
         local command = entry.command
         menu:registerEventHandler( "xoia_monitor_cmd_" .. i, function( element, event )
@@ -472,7 +456,7 @@ LUI.createMenu.XoiaMenu = function ( LocalClientIndex )
     local SettingsTabs = CoD.Options.SetupTabManager( menu, 500 )
 
     SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_CONFIG"), CoD.Xoia.CreateConfigTab)
-    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_MAP"), CoD.Xoia.CreateMonitorTab)
+    SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_MONITOR"), CoD.Xoia.CreateMonitorTab)
     SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_TRACKERS"), CoD.Xoia.CreateTrackersTab)
     SettingsTabs:addTab(LocalClientIndex, Engine.Localize("XOIA_MENU_TAB_INFO"), CoD.Xoia.CreateInfoTab)
 

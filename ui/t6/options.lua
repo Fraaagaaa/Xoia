@@ -504,11 +504,11 @@ CoD.Options.AddOptionCategories = function ( f42_arg0 )
 			} )
 		end
 		
-		f42_local0 = f42_local2:addButton( Engine.Localize( "MENU_SETTINGS_CAPS" ) )
-		f42_local0:setActionEventName( "open_settings" )
-		
 		local f42_local_xoia = f42_local2:addButton( "XOIA" )
 		f42_local_xoia:setActionEventName( "xoia" )
+
+		f42_local0 = f42_local2:addButton( Engine.Localize( "MENU_SETTINGS_CAPS" ) )
+		f42_local0:setActionEventName( "open_settings" )
 
 		f42_local1 = f42_local2:addButton( Engine.Localize( "MENU_CONTROLS_CAPS" ) )
 		f42_local1:setActionEventName( "open_controls" )

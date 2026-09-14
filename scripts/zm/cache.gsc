@@ -7,11 +7,13 @@ init()
     precachemodel("c_zom_farmgirl_viewhands");
     precachemodel("c_zom_ghost_viewhands");
     precachemodel("c_zom_handsome_sleeveless_viewhands");
+    precachemodel("c_zom_hazmat_viewhands_light");
     precachemodel("c_zom_nikolai_viewhands");
     precachemodel("c_zom_oldman_viewhands");
     precachemodel("c_zom_oleary_shortsleeve_viewhands");
     precachemodel("c_zom_player_arlington_fb");
     precachemodel("c_zom_player_cdc_fb");
+    precachemodel("c_zom_player_cia_fb");
     precachemodel("c_zom_player_deluca_fb");
     precachemodel("c_zom_player_engineer_dlc1_fb");
     precachemodel("c_zom_player_farmgirl_dlc1_fb");
