@@ -170,9 +170,6 @@ init()
 	level thread init_hud();
 	level thread init_camos();
 	level thread init_monitor();
-
-    println("init xoia");
-
 	level thread connected();
 
     if(isnuketown())
@@ -201,46 +198,55 @@ connected()
 	while(true)
 	{
         level waittill("connecting", player);
-
         if(isstgame())
             return;
 
-        player thread disconnect();
-		player thread spawned();
-		player thread reapply_character_on_spawn();
-		player thread xoia_sync_start();
-		player thread monitorDowns();
-		if(isvictismap())
+        player thread onconnect();
+	}
+}
+
+onconnect()
+{
+    self thread spawned();
+    self thread disconnect();
+    self thread timer();
+    self thread timerlocation();
+	self thread reapply_character_on_spawn();
+	self thread xoia_sync_start();
+	self thread monitorDowns();
+	if(isvictismap())
+	{
+		self thread bank();
+		self thread award_permaperks_safe();
+    }
+}
+
+spawned()
+{
+    self waittill("spawned_player");
+	self iprintln("^5[^6" + PATCH_NAME + " ^7V^2" + VERSION + "^5]");
+	if(isburied())
+	{
+		if(!isdefined(self.watching_stats))
 		{
-			player thread bank();
-			player thread award_permaperks_safe();
+			self.initial_stats = array();
+			self thread watch_stat("springpad_zm");
+			self thread watch_stat("turbine");
+			self thread watch_stat("subwoofer_zm");
+			self.watching_stats = true;
 		}
-        player waittill("spawned_player");
-		{
-			if(isburied())
-			{
-				if(!isdefined(player.watching_stats))
-				{
-					player.initial_stats = array();
-					player thread watch_stat("springpad_zm");
-					player thread watch_stat("turbine");
-					player thread watch_stat("subwoofer_zm");
-					player.watching_stats = true;
-				}
-			}
-			if(isdierise())
-			{
-                if(!isdefined(player.watching_stats))
-                {
-				    player.initial_stats = array();
-				    player thread watch_stat("springpad_zm");
-				    player.watching_stats = true;
-                }
-			}
-			if(ismob())
-			{
-			}
-		}
+	}
+	if(isdierise())
+	{
+        if(!isdefined(self.watching_stats))
+        {
+			self.initial_stats = array();
+			self thread watch_stat("springpad_zm");
+			self.watching_stats = true;
+        }
+	}
+	if(ismob())
+	{
 	}
 }
 
@@ -250,16 +256,6 @@ disconnect()
     self cache_current_tomahawk();
 }
 
-spawned()
-{
-    if(!isdefined(self.timer))
-    {
-        self thread timer();
-        self thread timerlocation();
-    }
-
-	self iprintln("^5[^6" + PATCH_NAME + " ^7V^2" + VERSION + "^5]");
-}
 
 watch_stat(stat)
 {
