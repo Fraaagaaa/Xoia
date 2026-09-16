@@ -1033,8 +1033,6 @@ processCommand(command, player, twitch)
         {
             case "!help": helpcase(); break;
 
-            case "!downs": downscase(player, twitch); break;
-
             case "!firstbox": case "!fb": fbcase(command); break;
             case "!box": boxcase(command[1]); break;
             case "!bt": case "!boxtracker": setDvar("boxhits", !getDvarInt("boxhits")); break;
@@ -1064,6 +1062,7 @@ processCommand(command, player, twitch)
         case "!dg": print_drops_grabbed(command[1], twitch); break;
         case "!bh": case "!boxhits": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
 
+        case "!downs": downscase(player, twitch); break;
 
         case "!times": print_times(twitch); break;
         case "!rt": case "!roundtime": print_round_times(command[1], twitch); break;
