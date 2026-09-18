@@ -1048,7 +1048,7 @@ processCommand(command, player, twitch)
 
             case "!key": keycase(command[1]); break;
 
-            case "!keymonitor": keycase("monitor"); break;
+            case "!keymonitor": keycase("", true); break;
 
             case "!bs": case "!backspeed": bscase(); break;
 
@@ -1094,9 +1094,12 @@ frozenrounds(twitch)
     globalprint("Small frozen rounds: 121, 123, 127, 129, 133, 135, 140,\n141, 143, 150, 152, 153, 154, 162+", twitch);
 }
 
-keycase(loc)
+keycase(loc, monitor_request)
 {
-    if(loc == "monitor")
+    if(!isdefined(monitor_request))
+        monitor_request = false;
+
+    if(monitor_request)
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_KEY, (DESIRED_KEY + 1) % 3, STAT_KEY_MAP);
         switch(DESIRED_KEY)
@@ -1113,6 +1116,7 @@ keycase(loc)
         }
         return;
     }
+
     if(IsSubStr(loc, "cafe") || IsSubStr(loc, "west"))
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_KEY, 1, STAT_KEY_MAP);
@@ -2013,46 +2017,60 @@ get_current_box_location()
 
 boxmove( location )
 {
-    if ( isDefined( level._zombiemode_custom_box_move_logic ) )
-        kept_move_logic = level._zombiemode_custom_box_move_logic;
+    chests_new = [];
 
-    level._zombiemode_custom_box_move_logic = ::force_next_location;
-
-    foreach ( chest in level.chests )
+    if(!isdefined(level.chests))
     {
-        if ( !chest.hidden && chest.script_noteworthy == location )
+        globalprint("Waiting for the chests to load");
+        while(!isdefined(level.chests))
+            wait 0.1;
+        globalprint("Moving box");
+    }
+
+    foreach (chest in level.chests)
+    {
+        chest notify("kill_chest_think");
+
+        if (isdefined(chest.zbarrier) && chest.zbarrier getclientfield("magicbox_amb_fx"))
+            chest.zbarrier setclientfield("magicbox_amb_fx", 0);
+
+        if (chest.script_noteworthy == location)
         {
-            if ( isDefined( kept_move_logic ) )
-                level._zombiemode_custom_box_move_logic = kept_move_logic;
-            return;
+            found = chest;
         }
-        if ( !chest.hidden )
+        else
         {
-            level.chest_min_move_usage = 8;
-            level.chest_name = location;
+            chests_new[chests_new.size] = chest;
+        }
 
-            flag_set( "moving_chest_now" );
-            chest thread fast_chest_move();
+        if (is_classic() && isdefined(level.random_pandora_box_start) && level.random_pandora_box_start)
+        {
+            chest.start_exclude = 1;
 
-            wait 0.05;
-            level notify( "weapon_fly_away_start" );
-            wait 0.05;
-            level notify( "weapon_fly_away_end" );
-
-            break;
+            if (chest.script_noteworthy == location)
+            {
+                chest.start_exclude = 0;
+            }
         }
     }
 
-    while ( flag( "moving_chest_now" ) )
-        wait 0.05;
+    if (isdefined(level.random_pandora_box_start) && level.random_pandora_box_start)
+    {
+        maps\mp\zombies\_zm_magicbox::init_starting_chest_location("start_chest");
+    }
+    else
+    {
+        level.chests = [];
+        level.chests[0] = found;
+        foreach (new in chests_new)
+        {
+            level.chests[level.chests.size] = new;
+        }
 
-    if ( isDefined( kept_move_logic ) )
-        level._zombiemode_custom_box_move_logic = kept_move_logic;
+        maps\mp\zombies\_zm_magicbox::init_starting_chest_location(found);
+    }
 
-    if ( isDefined( level.chest_name ) && isDefined( level.dig_magic_box_moved ) )
-        level.dig_magic_box_moved = 0;
-
-    level.chest_min_move_usage = 4;
+    array_thread(level.chests, maps\mp\zombies\_zm_magicbox::treasure_chest_think);
 }
 
 fast_chest_move()
