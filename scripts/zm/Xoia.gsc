@@ -5,7 +5,7 @@
 #include maps\mp\zombies\_zm;
 #include maps\mp\zombies\_zm_utility;
 
-#define DEBUG 0
+#define DEBUG 1
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
@@ -214,6 +214,7 @@ onconnect()
 	self thread reapply_character_on_spawn();
 	self thread xoia_sync_start();
 	self thread monitorDowns();
+    self thread monitorRedScreens();
 	if(isvictismap())
 	{
 		self thread bank();
@@ -956,8 +957,8 @@ readchat()
 
     // Hacer un tab con los tiempos de la partida
     // misc
-    addCommands(array("help", "dg", "backspeed", "boxhits", "boxtracker", "downs"), false);
-    addCommands(array("bs", "bh", "bt"), true);
+    addCommands(array("help", "dg", "backspeed", "boxhits", "boxtracker", "downs", "redscreens"), false);
+    addCommands(array("bs", "bh", "bt", "reds"), true);
 
     // Timers
     addCommands(array("timer", "time", "times", "roundtime", "sph", "traptimer"), false);
@@ -1063,6 +1064,7 @@ processCommand(command, player, twitch)
         case "!bh": case "!boxhits": globalprint("Box hits: " + level.total_chest_accessed, twitch); break;
 
         case "!downs": downscase(player, twitch); break;
+        case "redscreens": case "!reds": redscase(player, twitch); break;
 
         case "!times": print_times(twitch); break;
         case "!rt": case "!roundtime": print_round_times(command[1], twitch); break;
@@ -1703,25 +1705,7 @@ special_rounds(type, twitch)
 
 helpcase()
 {
-    i = 0;
-    while (i < level.chatcommands.size)
-    {
-        text = "";
-        for (j = 0; j < 10; j++)
-        {
-            if (!isdefined(level.chatcommands[i + j]))
-                break;
-
-            if (j > 0)
-                text += " ";
-
-            text += level.chatcommands[i + j];
-        }
-
-        globalprint(text);
-        i += 10;
-        wait 0.1;
-    }
+    print_array_in_chunks(level.chatcommands, 14, ", ");
 }
 
 globalprint(message, twitch)
@@ -3316,6 +3300,8 @@ monitorDowns()
     while(true)
     {
         self waittill("player_downed");
+
+        level notify("monitor_log", self.name + " downed at round " + level.round_number);
         if(self.monitor_downs.size > 0 && self.monitor_downs[self.monitor_downs.size - 1].round_number == level.round_number)
         {
             self.monitor_downs[self.monitor_downs.size - 1].amount++;
@@ -3328,6 +3314,45 @@ monitorDowns()
             self.monitor_downs[index].amount = 1;
         }
     }
+}
+
+redscase(who, twitch)
+{
+    if(!isdefined(who.monitor_reds) || who.monitor_reds.size == 0)
+    {
+        globalprint("No red screens registered.", twitch);
+        return;
+    }
+
+    globalprint("Red screens by " + who.name, twitch);
+
+    print_array_in_chunks(who.monitor_reds, 5, " | ");
+}
+
+monitorRedScreens()
+{
+    level endon("end_game");
+    self endon("disconnect");
+
+    self.monitor_reds = [];
+
+    while(true)
+    {
+        while(self.health > self.maxhealth * 0.2)
+            wait 0.1;
+
+
+        time_now = int(gettime() / 1000);
+        game_time = time_now - level.start_time;
+        self.monitor_reds[self.monitor_reds.size] = int_to_time(game_time);
+        level notify("monitor_log", self.name + " redscreened at " + int_to_time(game_time));
+
+        while(self.health < self.maxhealth)
+            wait 0.1;
+        
+        wait 0.1;
+    }
+
 }
 
 round_think( restart )
@@ -3463,5 +3488,43 @@ round_think( restart )
         level round_over();
         level notify( "between_round_over" );
         restart = 0;
+    }
+}
+
+print_array_in_chunks(array, chunk_size, separator, delay)
+{
+    if (!isdefined(array) || !isdefined(chunk_size) || chunk_size <= 0)
+        return;
+
+    if (!isdefined(separator))
+        separator = " ";
+
+    if (!isdefined(delay))
+        delay = 0.1;
+
+    i = 0;
+
+    while (i < array.size)
+    {
+        text = "";
+        count = 0;
+
+        for (j = 0; j < chunk_size && i + j < array.size; j++)
+        {
+            if (!isdefined(array[i + j]))
+                continue;
+
+            if (count > 0)
+                text += separator;
+
+            text += array[i + j];
+            count++;
+        }
+
+        if (count > 0)
+            globalprint(text);
+
+        i += chunk_size;
+        wait delay;
     }
 }
