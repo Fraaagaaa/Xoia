@@ -585,6 +585,21 @@ LUI.createMenu.OptionsControlsMenu = function (localClientIndex)
 		PausedAtRoundText:setText( Engine.Localize( "XOIA_MENU_PAUSED_AT_ROUND" ) .. " " .. tostring( currentRound ) )
 
 		controlsWidget:addElement( PausedAtRoundText )
+
+		local StartedAtText = LUI.UIText.new()
+		local y = 40 - CoD.textSize.Default - 4
+
+		StartedAtText:setLeftRight( true, true, 0, 0 )
+		StartedAtText:setTopBottom( true, false, y, y + CoD.textSize.Default )
+		StartedAtText:setFont( CoD.fonts.Default )
+		StartedAtText:setAlignment( LUI.Alignment.Center )
+
+		local startTime = UIExpression.DvarString( localClientIndex, "xoia_info_start_time" )
+		if startTime == nil or startTime == "" then startTime = "N/A" end
+
+		StartedAtText:setText( Engine.Localize( "XOIA_MENU_STARTED_AT" ) .. " " .. startTime )
+
+		controlsWidget:addElement( StartedAtText )
 	end
 
 	return controlsWidget

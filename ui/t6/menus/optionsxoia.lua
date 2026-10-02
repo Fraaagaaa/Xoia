@@ -410,6 +410,22 @@ end
 CoD.Xoia.AddPausedAtRoundText = function ( menu, LocalClientIndex )
     if UIExpression.IsInGame( LocalClientIndex ) ~= 1 then return end
 
+    local StartedAtText = LUI.UIText.new()
+    local startY = 40 - CoD.textSize.Default - 4
+
+    StartedAtText:setLeftRight( true, true, 0, 0 )
+    StartedAtText:setTopBottom( true, false, startY, startY + CoD.textSize.Default )
+    StartedAtText:setFont( CoD.fonts.Default )
+    StartedAtText:setAlignment( LUI.Alignment.Center )
+
+    local startTime = UIExpression.DvarString( LocalClientIndex, "xoia_info_start_time" )
+    if startTime == nil or startTime == "" then
+        startTime = "N/A"
+    end
+
+    StartedAtText:setText( Engine.Localize("XOIA_MENU_STARTED_AT") .. " " .. startTime )
+    menu:addElement( StartedAtText )
+
     local RoundText = LUI.UIText.new()
 
     RoundText:setLeftRight( true, true, 0, 0 )

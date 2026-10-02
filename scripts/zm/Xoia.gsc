@@ -5,11 +5,13 @@
 #include maps\mp\zombies\_zm;
 #include maps\mp\zombies\_zm_utility;
 
-#define DEBUG 1
+#define DEBUG 0
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
-#define FILE_MONITOR "xoia/monitor.log"
+#define FILE_MONITOR "xoia/monitor " + format_utc() + ".log"
+#define FILE_DOWNS "xoia/downs " + format_utc() + ".log"
+#define FILE_REDS "xoia/reds " + format_utc() + ".log"
 #define FILE_TWITCH_SEND "twitch/send_to_twitch.txt"
 
 #define STAT_CHAR_MAP "zm_highrise"
@@ -189,7 +191,7 @@ init()
 
 	replaceFunc(getfunction("maps/mp/zombies/_zm_magicbox", "treasure_chest_weapon_spawn"), ::treasure_chest_weapon_spawn);
 	replaceFunc(getfunction("maps/mp/zombies/_zm", "round_think"), ::round_think);
-    bscase(true);
+    level thread bscase(true);
 }
 
 connected()
@@ -601,12 +603,6 @@ traptimer()
     level endon("end_game");
 
     level.traptimer = createserverfontstring( "objective", 1.4 );
-    level.traptimer.alignx = "left";
-    level.traptimer.aligny = "top";
-    level.traptimer.horzalign = "user_left";
-    level.traptimer.vertalign = "user_top";
-    level.traptimer.x = -2;
-    level.traptimer.y = 14;
     level.traptimer.fontscale = 1.4;
     level.traptimer.hidewheninmenu = true;
     level.traptimer.hidden = 0;
@@ -886,6 +882,8 @@ bank()
 init_monitor()
 {
     level thread monitor_log();
+    level thread downs_log();
+    level thread reds_log();
     level thread readchat();
     level thread readtwitchchat();
     level thread readconsole();
@@ -916,6 +914,36 @@ monitor_log()
     {
         level waittill("monitor_log", log);
         f = fs_fopen(FILE_MONITOR, "append");
+        fs_writeline(f, log);
+        fs_fclose(f);
+    }
+}
+
+downs_log()
+{
+    level endon("end_game");
+
+    f = fs_fopen(FILE_DOWNS, "write");
+    fs_fclose(f);
+    while(true)
+    {
+        level waittill("downs_log", log);
+        f = fs_fopen(FILE_DOWNS, "append");
+        fs_writeline(f, log);
+        fs_fclose(f);
+    }
+}
+
+reds_log()
+{
+    level endon("end_game");
+
+    f = fs_fopen(FILE_DOWNS, "write");
+    fs_fclose(f);
+    while(true)
+    {
+        level waittill("reds_log", log);
+        f = fs_fopen(FILE_DOWNS, "append");
         fs_writeline(f, log);
         fs_fclose(f);
     }
@@ -3301,7 +3329,7 @@ monitorDowns()
     {
         self waittill("player_downed");
 
-        level notify("monitor_log", self.name + " downed at round " + level.round_number);
+        level notify("downs_log", self.name + " downed at round " + level.round_number);
         if(self.monitor_downs.size > 0 && self.monitor_downs[self.monitor_downs.size - 1].round_number == level.round_number)
         {
             self.monitor_downs[self.monitor_downs.size - 1].amount++;
@@ -3345,7 +3373,7 @@ monitorRedScreens()
         time_now = int(gettime() / 1000);
         game_time = time_now - level.start_time;
         self.monitor_reds[self.monitor_reds.size] = int_to_time(game_time);
-        level notify("monitor_log", self.name + " redscreened at " + int_to_time(game_time));
+        level notify("reds_log", self.name + " redscreened at " + int_to_time(game_time));
 
         while(self.health < self.maxhealth)
             wait 0.1;
@@ -3527,4 +3555,138 @@ print_array_in_chunks(array, chunk_size, separator, delay)
         i += chunk_size;
         wait delay;
     }
+}
+
+locmonth(month)
+{
+    if (getDvarInt("loc_language") == 6)
+    {
+        switch (month)
+        {
+            case 1:  return "ENERO";
+            case 2:  return "FEBRERO";
+            case 3:  return "MARZO";
+            case 4:  return "ABRIL";
+            case 5:  return "MAYO";
+            case 6:  return "JUNIO";
+            case 7:  return "JULIO";
+            case 8:  return "AGOSTO";
+            case 9:  return "SEPTIEMBRE";
+            case 10: return "OCTUBRE";
+            case 11: return "NOVIEMBRE";
+            case 12: return "DICIEMBRE";
+        }
+    }
+    else
+    {
+        switch (month)
+        {
+            case 1:  return "JANUARY";
+            case 2:  return "FEBRUARY";
+            case 3:  return "MARCH";
+            case 4:  return "APRIL";
+            case 5:  return "MAY";
+            case 6:  return "JUNE";
+            case 7:  return "JULY";
+            case 8:  return "AUGUST";
+            case 9:  return "SEPTEMBER";
+            case 10: return "OCTOBER";
+            case 11: return "NOVEMBER";
+            case 12: return "DECEMBER";
+        }
+    }
+
+    return "";
+}
+
+format_utc(timestamp)
+{
+    if (!isdefined(timestamp))
+        timestamp = getutc();
+
+    timestamp = int(timestamp);
+
+    days = int(timestamp / 86400);
+    remaining = timestamp % 86400;
+
+    hour = int(remaining / 3600);
+    remaining %= 3600;
+
+    minute = int(remaining / 60);
+    second = remaining % 60;
+
+    year = 1970;
+
+    while (true)
+    {
+        days_in_year = 365;
+
+        if (is_leap_year(year))
+            days_in_year = 366;
+
+        if (days < days_in_year)
+            break;
+
+        days -= days_in_year;
+        year++;
+    }
+
+    month = 1;
+
+    while (true)
+    {
+        days_in_month = get_days_in_month(month, year);
+
+        if (days < days_in_month)
+            break;
+
+        days -= days_in_month;
+        month++;
+    }
+
+    day = days + 1;
+
+    time = pad2(hour) + ":" + pad2(minute) + ":" + pad2(second);
+
+    if (getDvarInt("loc_language") == 6)
+    {
+        return day + " DE " + locmonth(month) + " DE " + year + " - " + time + " (UTC)";
+    }
+
+    return locmonth(month) + " " + day + ", " + year + " - " + time + " (UTC)";
+}
+
+is_leap_year(year)
+{
+    if (year % 400 == 0)
+        return true;
+
+    if (year % 100 == 0)
+        return false;
+
+    return year % 4 == 0;
+}
+
+pad2(value)
+{
+    if (value < 10)
+        return "0" + value;
+
+    return "" + value;
+}
+get_days_in_month(month, year)
+{
+    switch (month)
+    {
+        case 1: case 3: case 5: case 7: case 8: case 10: case 12: return 31;
+        case 4: case 6: case 9: case 11: return 30;
+
+        case 2:
+            if (is_leap_year(year))
+                return 29;
+
+            return 28;
+    }
+
+    return 0;
 }

@@ -175,6 +175,22 @@ LUI.createMenu.class = function ( f13_arg0 )
 	-- Xoia_ui.gsc::update_info_dvars()) y la misma clave de localizacion
 	-- (XOIA_MENU_PAUSED_AT_ROUND). Centrado, igual que en XoiaMenu.
 	if CoD.isZombie == true then
+		local f13_local_startedAtText = LUI.UIText.new()
+		local startY = 40 - CoD.textSize.Default - 4
+
+		f13_local_startedAtText:setLeftRight( true, true, 0, 0 )
+		f13_local_startedAtText:setTopBottom( true, false, startY, startY + CoD.textSize.Default )
+		f13_local_startedAtText:setFont( CoD.fonts.Default )
+		f13_local_startedAtText:setAlignment( LUI.Alignment.Center )
+
+		local startTime = UIExpression.DvarString( f13_arg0, "xoia_info_start_time" )
+		if startTime == nil or startTime == "" then
+			startTime = "N/A"
+		end
+
+		f13_local_startedAtText:setText( Engine.Localize( "XOIA_MENU_STARTED_AT" ) .. " " .. startTime )
+		f13_local1:addElement( f13_local_startedAtText )
+
 		local f13_local_roundText = LUI.UIText.new()
 
 		f13_local_roundText:setLeftRight( true, true, 0, 0 )

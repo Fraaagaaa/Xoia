@@ -564,6 +564,22 @@ LUI.createMenu.OptionsMenu = function ( f43_arg0 )
 	CoD.Options.AddOptionCategories( f43_local0 )
 
 	if UIExpression.IsInGame() == 1 and CoD.isZombie == true then
+		local f43_local_startedAtText = LUI.UIText.new()
+		local startY = 40 - CoD.textSize.Default - 4
+
+		f43_local_startedAtText:setLeftRight( true, true, 0, 0 )
+		f43_local_startedAtText:setTopBottom( true, false, startY, startY + CoD.textSize.Default )
+		f43_local_startedAtText:setFont( CoD.fonts.Default )
+		f43_local_startedAtText:setAlignment( LUI.Alignment.Center )
+
+		local startTime = UIExpression.DvarString( f43_arg0, "xoia_info_start_time" )
+		if startTime == nil or startTime == "" then
+			startTime = "N/A"
+		end
+
+		f43_local_startedAtText:setText( Engine.Localize( "XOIA_MENU_STARTED_AT" ) .. " " .. startTime )
+		f43_local0:addElement( f43_local_startedAtText )
+
 		local f43_local_roundText = LUI.UIText.new()
 
 		f43_local_roundText:setLeftRight( true, true, 0, 0 )
