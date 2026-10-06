@@ -459,6 +459,15 @@ createdvars()
     enabledvarchangednotify("cg_drawfps");
     enabledvarchangednotify("chat");
 
+
+    setDvar("g_fix_sound_notify_ref_leak", 1);
+    setDvar("g_zm_fix_damage_overflow",   1);
+    setDvar("cl_fix_25day_blackscreen",   1);
+    setDvar("cl_timeout" 3600);
+    setDvar("sv_timeout" 1800);
+    setDvar("cl_connectTimeout" 3600);
+    setDvar("sv_connectTimeout" 1800);
+
     if (issurvivalmap())
     {
         createDvar("avg", 1);
@@ -2890,7 +2899,12 @@ HashFlashLoop()
     {
         level waittill("start_of_round");
         if(level.round_number % 10 == 8)
+        {
             cmdexec("flashScriptHashes");
+            setdvar("cg_drawChecksums", 1);
+            wait 3;
+            setdvar("cg_drawChecksums", 0);
+        }
     }
 }
 
