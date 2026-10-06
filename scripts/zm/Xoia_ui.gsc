@@ -12,8 +12,6 @@ init()
     level thread init_info_dvars();
     register_menu_handler( "character", ::on_character_menu );
     register_menu_handler( "game_monitor", ::on_game_monitor_menu);
-    setDvar("xoia_info_start_time", format_utc());
-    
 }
 
 init_info_dvars()

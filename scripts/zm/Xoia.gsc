@@ -9,9 +9,6 @@
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
-#define FILE_MONITOR "xoia/monitor " + format_utc() + ".log"
-#define FILE_DOWNS "xoia/downs " + format_utc() + ".log"
-#define FILE_REDS "xoia/reds " + format_utc() + ".log"
 #define FILE_TWITCH_SEND "twitch/send_to_twitch.txt"
 
 #define STAT_CHAR_MAP "zm_highrise"
@@ -166,6 +163,7 @@ init()
         setDvar("sv_cheats", 1);
     }
 
+    level thread init_log_files();
 	level thread createdvars();
 	level thread dvar_tracker();
 	level thread init_anticheat();
@@ -192,6 +190,17 @@ init()
 	replaceFunc(getfunction("maps/mp/zombies/_zm_magicbox", "treasure_chest_weapon_spawn"), ::treasure_chest_weapon_spawn);
 	replaceFunc(getfunction("maps/mp/zombies/_zm", "round_think"), ::round_think);
     level thread bscase(true);
+}
+
+init_log_files()
+{
+    utc = getUTC();
+    start_timestamp = format_utc(utc, true);
+    setDvar("xoia_info_start_time", format_utc(utc));
+
+    level.file_monitor = "xoia/" + start_timestamp + "/monitor.log";
+    level.file_downs = "xoia/" + start_timestamp + "/downs.log";
+    level.file_reds = "xoia/" + start_timestamp + "/reds.log";
 }
 
 connected()
@@ -905,15 +914,28 @@ init_monitor()
 
 monitor_log()
 {
-    // meter en el globalprint un notify para cunado escribe algo de los comandos
     level endon("end_game");
 
-    f = fs_fopen(FILE_MONITOR, "write");
+    f = fs_fopen(level.file_monitor, "write");
+    if (!f)
+    {
+        println("^1[XOIA] Error opening log file: " + level.file_monitor);
+        return;
+    }
+
     fs_fclose(f);
+
     while(true)
     {
         level waittill("monitor_log", log);
-        f = fs_fopen(FILE_MONITOR, "append");
+
+        f = fs_fopen(level.file_monitor, "append");
+        if (!f)
+        {
+            println("^1[XOIA] Error appending log file: " + level.file_monitor);
+            continue;
+        }
+
         fs_writeline(f, log);
         fs_fclose(f);
     }
@@ -923,12 +945,26 @@ downs_log()
 {
     level endon("end_game");
 
-    f = fs_fopen(FILE_DOWNS, "write");
+    f = fs_fopen(level.file_downs, "write");
+    if (!f)
+    {
+        println("^1[XOIA] Error opening log file: " + level.file_downs);
+        return;
+    }
+
     fs_fclose(f);
+
     while(true)
     {
         level waittill("downs_log", log);
-        f = fs_fopen(FILE_DOWNS, "append");
+
+        f = fs_fopen(level.file_downs, "append");
+        if (!f)
+        {
+            println("^1[XOIA] Error appending log file: " + level.file_downs);
+            continue;
+        }
+
         fs_writeline(f, log);
         fs_fclose(f);
     }
@@ -938,12 +974,26 @@ reds_log()
 {
     level endon("end_game");
 
-    f = fs_fopen(FILE_DOWNS, "write");
+    f = fs_fopen(level.file_reds, "write");
+    if (!f)
+    {
+        println("^1[XOIA] Error opening log file: " + level.file_reds);
+        return;
+    }
+
     fs_fclose(f);
+
     while(true)
     {
         level waittill("reds_log", log);
-        f = fs_fopen(FILE_DOWNS, "append");
+
+        f = fs_fopen(level.file_reds, "append");
+        if (!f)
+        {
+            println("^1[XOIA] Error appending log file: " + level.file_reds);
+            continue;
+        }
+
         fs_writeline(f, log);
         fs_fclose(f);
     }
@@ -3599,12 +3649,20 @@ locmonth(month)
     return "";
 }
 
-format_utc(timestamp)
+format_log_timestamp(timestamp)
 {
     if (!isdefined(timestamp))
         timestamp = getutc();
 
     timestamp = int(timestamp);
+
+    offset = get_central_europe_offset(timestamp);
+    timezone = "CET";
+
+    if (offset == 7200)
+        timezone = "CEST";
+
+    timestamp += offset;
 
     days = int(timestamp / 86400);
     remaining = timestamp % 86400;
@@ -3646,14 +3704,211 @@ format_utc(timestamp)
 
     day = days + 1;
 
-    time = pad2(hour) + ":" + pad2(minute) + ":" + pad2(second);
+    // Formato seguro para Windows:
+    // 2026-10-02_18-14-32_CEST
+    return year + "-" + pad2(month) + "-" + pad2(day) + "_" +
+        pad2(hour) + "-" + pad2(minute) + "-" + pad2(second) + "_" + timezone;
+}
 
-    if (getDvarInt("loc_language") == 6)
+format_utc(timestamp, log)
+{
+    if (!isdefined(timestamp))
+        timestamp = getutc();
+    if (!isdefined(log))
+        log = false;
+
+    timestamp = int(timestamp);
+
+    offset = get_central_europe_offset(timestamp);
+
+    timezone = "CET";
+
+    if (offset == 7200)
+        timezone = "CEST";
+
+    // Aplicamos la zona horaria.
+    timestamp += offset;
+
+    days = int(timestamp / 86400);
+    remaining = timestamp % 86400;
+
+    hour = int(remaining / 3600);
+    remaining %= 3600;
+
+    minute = int(remaining / 60);
+    second = remaining % 60;
+
+    year = 1970;
+
+    while (true)
     {
-        return day + " DE " + locmonth(month) + " DE " + year + " - " + time + " (UTC)";
+        days_in_year = 365;
+
+        if (is_leap_year(year))
+            days_in_year = 366;
+
+        if (days < days_in_year)
+            break;
+
+        days -= days_in_year;
+        year++;
     }
 
-    return locmonth(month) + " " + day + ", " + year + " - " + time + " (UTC)";
+    month = 1;
+
+    while (true)
+    {
+        days_in_month = get_days_in_month(month, year);
+
+        if (days < days_in_month)
+            break;
+
+        days -= days_in_month;
+        month++;
+    }
+
+    day = days + 1;
+
+    if(log)
+        time = pad2(hour) + " " + pad2(minute) + " " + pad2(second);
+    else
+        time = pad2(hour) + ":" + pad2(minute) + ":" + pad2(second);
+
+    if (getDvarInt("loc_language") == 6)
+        return day + " DE " + locmonth(month) + " DE " + year + " - " + time + " (" + timezone + ")";
+
+    return locmonth(month) + " " + day + ", " + year + " - " + time + " (" + timezone + ")";
+}
+
+get_central_europe_offset(timestamp)
+{
+    days = int(timestamp / 86400);
+    remaining = timestamp % 86400;
+
+    hour = int(remaining / 3600);
+
+    year = 1970;
+
+    while (true)
+    {
+        days_in_year = 365;
+
+        if (is_leap_year(year))
+            days_in_year = 366;
+
+        if (days < days_in_year)
+            break;
+
+        days -= days_in_year;
+        year++;
+    }
+
+    month = 1;
+
+    while (true)
+    {
+        days_in_month = get_days_in_month(month, year);
+
+        if (days < days_in_month)
+            break;
+
+        days -= days_in_month;
+        month++;
+    }
+
+    day = days + 1;
+
+    // Enero, febrero, noviembre y diciembre -> CET
+    if (month < 3 || month > 10)
+        return 3600;
+
+    // Abril -> septiembre -> CEST
+    if (month > 3 && month < 10)
+        return 7200;
+
+    // MARZO
+    if (month == 3)
+    {
+        last_sunday = get_last_sunday(year, 3);
+
+        if (day > last_sunday)
+            return 7200;
+
+        if (day < last_sunday)
+            return 3600;
+
+        // Último domingo de marzo:
+        // a partir de las 01:00 UTC empieza CEST.
+        if (hour >= 1)
+            return 7200;
+
+        return 3600;
+    }
+
+    // OCTUBRE
+    if (month == 10)
+    {
+        last_sunday = get_last_sunday(year, 10);
+
+        if (day < last_sunday)
+            return 7200;
+
+        if (day > last_sunday)
+            return 3600;
+
+        // Último domingo de octubre:
+        // a las 01:00 UTC termina CEST.
+        if (hour >= 1)
+            return 3600;
+
+        return 7200;
+    }
+
+    return 3600;
+}
+
+get_last_sunday(year, month)
+{
+    last_day = get_days_in_month(month, year);
+
+    // 0 = domingo
+    // 1 = lunes
+    // ...
+    // 6 = sábado
+    weekday = get_day_of_week(year, month, last_day);
+
+    return last_day - weekday;
+}
+
+get_day_of_week(year, month, day)
+{
+    days = 0;
+
+    y = 1970;
+
+    while (y < year)
+    {
+        if (is_leap_year(y))
+            days += 366;
+        else
+            days += 365;
+
+        y++;
+    }
+
+    m = 1;
+
+    while (m < month)
+    {
+        days += get_days_in_month(m, year);
+        m++;
+    }
+
+    days += day - 1;
+
+    // 01/01/1970 fue jueves.
+    // Si domingo = 0, jueves = 4.
+    return (days + 4) % 7;
 }
 
 is_leap_year(year)
@@ -3674,6 +3929,7 @@ pad2(value)
 
     return "" + value;
 }
+
 get_days_in_month(month, year)
 {
     switch (month)
