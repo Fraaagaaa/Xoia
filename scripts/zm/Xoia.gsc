@@ -5,7 +5,7 @@
 #include maps\mp\zombies\_zm;
 #include maps\mp\zombies\_zm_utility;
 
-#define DEBUG 0
+#define DEBUG 1
 #define VERSION "1.0"
 #define PATCH_NAME "Xoia"
 
@@ -461,12 +461,12 @@ createdvars()
 
 
     setDvar("g_fix_sound_notify_ref_leak", 1);
-    setDvar("g_zm_fix_damage_overflow",   1);
-    setDvar("cl_fix_25day_blackscreen",   1);
-    setDvar("cl_timeout" 3600);
-    setDvar("sv_timeout" 1800);
-    setDvar("cl_connectTimeout" 3600);
-    setDvar("sv_connectTimeout" 1800);
+    setDvar("g_zm_fix_damage_overflow", 1);
+    setDvar("cl_fix_25day_blackscreen", 1);
+    setDvar("cl_timeout", 3600);
+    setDvar("sv_timeout", 1800);
+    setDvar("cl_connectTimeout", 3600);
+    setDvar("sv_connectTimeout", 1800);
 
     if (issurvivalmap())
     {
@@ -3275,7 +3275,7 @@ powerup_grab( powerup_team )
                             players[i] thread [[getfunction("maps/mp/zombies/_zm_powerups", "powerup_vo")]]( "bonus_points_solo" );
                             break;
                         case "bonus_points_team":
-                            level thread [[getfunction("maps/mp/zombies/_zm_powerups", "bonus_points_player_powerup")]]( self );
+                            level thread [[getfunction("maps/mp/zombies/_zm_powerups", "bonus_points_team_powerup")]]( self );
                             players[i] thread [[getfunction("maps/mp/zombies/_zm_powerups", "powerup_vo")]]( "bonus_points_team" );
                             break;
                         case "teller_withdrawl":
